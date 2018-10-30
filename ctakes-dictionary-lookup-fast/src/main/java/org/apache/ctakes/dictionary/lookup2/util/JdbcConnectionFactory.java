@@ -5,10 +5,7 @@ import org.apache.log4j.Logger;
 
 import java.io.FileNotFoundException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -96,6 +93,7 @@ public enum JdbcConnectionFactory {
       EOL_LOGGER.info( "" );
       LOGGER.info( " Database connected" );
       CONNECTIONS.put( jdbcUrl, connection );
+      registerShutdownHook( connection );
       return connection;
    }
 
@@ -104,7 +102,7 @@ public enum JdbcConnectionFactory {
     *
     * @param jdbcUrl -
     * @return -
-    * @throws SQLException
+    * @throws SQLException -
     */
    static private String getConnectionUrl( final String jdbcUrl ) throws SQLException {
       final String urlDbPath = jdbcUrl.substring( HSQL_FILE_PREFIX.length() );
@@ -117,6 +115,29 @@ public enum JdbcConnectionFactory {
          throw new SQLException( "No Hsql DB exists at Url", fnfE );
       }
    }
+
+   /**
+    * register a shutdown hook that will shut down the database, removing temporary and lock files.
+    *
+    * @param connection -
+    */
+   static private void registerShutdownHook( final Connection connection ) {
+      // Registers a shutdown hook for the Hsql instance so that it
+      // shuts down nicely and any temporary or lock files are cleaned up.
+      Runtime.getRuntime().addShutdownHook( new Thread( () -> {
+         try {
+            final Statement shutdown = connection.createStatement();
+            shutdown.execute( "SHUTDOWN" );
+            shutdown.close();
+            // The db is read-only, so there should be no need to roll back any transactions.
+            connection.clearWarnings();
+            connection.close();
+         } catch ( SQLException sqlE ) {
+            // ignore
+         }
+      } ) );
+   }
+
 
    static private class DotPlotter extends TimerTask {
       private int _count = 0;

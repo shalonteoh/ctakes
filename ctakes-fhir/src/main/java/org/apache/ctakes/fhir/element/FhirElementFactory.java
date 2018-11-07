@@ -43,6 +43,8 @@ final public class FhirElementFactory {
    static public final String CODING_TUI = "tui";
    static public final String CODING_SEMANTIC = "semantic-group";
 
+   static public final char DIVIDER_CHAR = '-';
+
 
    private FhirElementFactory() {
    }
@@ -141,7 +143,7 @@ final public class FhirElementFactory {
     * @return fhir id containing name and code.
     */
    static public String createId( final JCas jCas, final String name, final String code ) {
-      return DocumentIDAnnotationUtil.getDocumentID( jCas ) + "_" + name + "_" + code;
+      return DocumentIDAnnotationUtil.getDocumentID( jCas ) + DIVIDER_CHAR + name + DIVIDER_CHAR + code;
    }
 
 //   Identifiers are 0 .. 1 , so unnecessary

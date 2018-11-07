@@ -32,7 +32,7 @@ final public class FhirElementParser {
    }
 
    static public String getIdName( final String id ) {
-      final String[] splits = StringUtil.fastSplit( id, '_' );
+      final String[] splits = StringUtil.fastSplit( id, DIVIDER_CHAR );
       if ( splits.length >= 3 ) {
          return splits[ 1 ];
       }

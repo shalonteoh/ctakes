@@ -6,6 +6,7 @@ import org.hl7.fhir.dstu3.model.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import static org.apache.ctakes.fhir.element.FhirElementFactory.DIVIDER_CHAR;
 import static org.hl7.fhir.dstu3.model.Composition.CompositionAttesterComponent;
 
 /**
@@ -65,7 +66,8 @@ public interface FhirPractitioner {
       } catch ( UnknownHostException uhE ) {
          hostname = "UnknownHost";
       }
-      practitioner.setId( getFamilyName() + '_' + getName() + '_' + getVersion() + "_" + hostname );
+      practitioner.setId(
+            getFamilyName() + DIVIDER_CHAR + getName() + DIVIDER_CHAR + getVersion() + DIVIDER_CHAR + hostname );
       practitioner.setActive( true );
       practitioner.addName( name );
       practitioner.addTelecom( contact );
@@ -79,7 +81,7 @@ public interface FhirPractitioner {
       final Organization organization = new Organization();
       final Practitioner practitioner = getPractitioner();
       final String id = practitioner.getId()
-            .replace( '_' + getName(), "" );
+                                    .replace( DIVIDER_CHAR + getName(), "" );
       organization.setId( id );
       organization.setActive( practitioner.getActive() );
       organization.setName( getFamilyName() );

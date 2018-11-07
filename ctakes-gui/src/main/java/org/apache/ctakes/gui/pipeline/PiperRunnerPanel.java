@@ -142,7 +142,7 @@ final public class PiperRunnerPanel extends JPanel {
    private JComponent createMainPanel() {
       final JComponent westPanel = createWestPanel();
       final JComponent eastPanel = createEastPanel();
-      final JSplitPane mainSplit = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, westPanel, eastPanel );
+      final JSplitPane mainSplit = new PositionedSplitPane( JSplitPane.HORIZONTAL_SPLIT, westPanel, eastPanel );
       mainSplit.setDividerLocation( 0.5 );
       return mainSplit;
    }
@@ -169,9 +169,9 @@ final public class PiperRunnerPanel extends JPanel {
       _cliTable = new SmoothTipTable( new CliOptionModel() );
       _cliTable.setRowHeight( 20 );
       _cliTable.setAutoResizeMode( JTable.AUTO_RESIZE_LAST_COLUMN );
-      _cliTable.getColumnModel().getColumn( 0 ).setPreferredWidth( 100 );
-      _cliTable.getColumnModel().getColumn( 0 ).setMaxWidth( 100 );
-      _cliTable.getColumnModel().getColumn( 1 ).setMaxWidth( 50 );
+      _cliTable.getColumnModel().getColumn( 0 ).setPreferredWidth( 200 );
+      _cliTable.getColumnModel().getColumn( 0 ).setMaxWidth( 200 );
+      _cliTable.getColumnModel().getColumn( 1 ).setMaxWidth( 100 );
       _cliTable.getColumnModel().getColumn( 3 ).setMaxWidth( 25 );
       _cliTable.setRowSelectionAllowed( true );
       _cliTable.setCellSelectionEnabled( true );

@@ -153,6 +153,7 @@
 	<modules>
 		<module>ctakes-gui</module>
 		<module>ctakes-gui-res</module>
+		<module>ctakes-fhir</module>
 		<module>ctakes-utils</module>
 		<module>ctakes-core</module>
 		<module>ctakes-type-system</module>
@@ -512,6 +513,11 @@
 			<dependency>
 				<groupId>org.apache.ctakes</groupId>
 				<artifactId>ctakes-gui-res</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.ctakes</groupId>
+				<artifactId>ctakes-fhir</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>

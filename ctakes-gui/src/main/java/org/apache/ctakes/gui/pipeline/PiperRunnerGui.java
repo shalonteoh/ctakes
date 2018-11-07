@@ -27,7 +27,8 @@ final public class PiperRunnerGui {
       // iPhone 5 : 1136 x 640 (under 16:9, unique to Apple)
       // iPad 3&4 : 2048 x 1536 (4:3, QXGA)
       // iPad Mini: 1024 x 768 (4:3, XGA)
-      final Dimension size = new Dimension( 800, 600 );
+//      final Dimension size = new Dimension( 800, 600 );
+      final Dimension size = new Dimension( 1024, 768 );
       frame.setSize( size );
       frame.setMinimumSize( size );
 //      System.setProperty( "apple.laf.useScreenMenuBar", "true" );

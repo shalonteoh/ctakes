@@ -35,6 +35,10 @@
           <groupId>org.apache.ctakes</groupId>
           <artifactId>ctakes-gui</artifactId>
       </dependency>
+     <dependency>
+        <groupId>org.apache.ctakes</groupId>
+        <artifactId>ctakes-fhir</artifactId>
+     </dependency>
       <dependency>
       <groupId>org.apache.ctakes</groupId>
         <artifactId>ctakes-coreference</artifactId>
@@ -72,12 +76,15 @@
                         <executions>
                             <execution>
                                 <goals>
-                                    <goal>java</goal>
+                                   <goal>exec</goal>
                                 </goals>
                             </execution>
                         </executions>
                         <configuration>
-                            <workingDirectory>${project.parent.basedir}</workingDirectory>
+                           <executable>java</executable>
+                           <includeProjectDependencies>true</includeProjectDependencies>
+                           <includePluginDependencies>true</includePluginDependencies>
+                           <workingDirectory>${project.parent.basedir}</workingDirectory>
                             <arguments>
                                 <argument>-classpath</argument>
                                 <classpath/>

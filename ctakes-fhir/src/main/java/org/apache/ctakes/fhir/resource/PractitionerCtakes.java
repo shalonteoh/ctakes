@@ -5,6 +5,8 @@ import org.hl7.fhir.dstu3.model.Organization;
 import org.hl7.fhir.dstu3.model.Practitioner;
 import org.hl7.fhir.dstu3.model.Reference;
 
+import static org.apache.ctakes.fhir.element.FhirElementFactory.DIVIDER_CHAR;
+
 /**
  * https://www.hl7.org/fhir/practitioner.html
  * Even though ctakes is not human, registering it as a Practitioner provides reference to information source and devlist contact
@@ -32,7 +34,7 @@ public enum PractitionerCtakes implements FhirPractitioner {
 
    @Override
    public String getVersion() {
-      return "4_0_1";
+      return "4" + DIVIDER_CHAR + "0" + DIVIDER_CHAR + "1";
    }
 
    @Override

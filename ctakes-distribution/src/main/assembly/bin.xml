@@ -47,6 +47,7 @@
 				<include>org.apache.ctakes:ctakes-dictionary-lookup-fast</include>				
 				<include>org.apache.ctakes:ctakes-drug-ner</include>
 				<include>org.apache.ctakes:ctakes-gui</include>
+            <include>org.apache.ctakes:ctakes-fhir</include>
 				<include>org.apache.ctakes:ctakes-lvg</include>
 				<include>org.apache.ctakes:ctakes-ne-contexts</include>
 				<include>org.apache.ctakes:ctakes-pos-tagger</include>

@@ -2,6 +2,7 @@ package org.apache.ctakes.core.util;
 
 
 import org.apache.ctakes.core.util.textspan.TextSpan;
+import org.apache.ctakes.typesystem.type.constants.CONST;
 import org.apache.ctakes.typesystem.type.relation.BinaryTextRelation;
 import org.apache.ctakes.typesystem.type.relation.CollectionTextRelation;
 import org.apache.ctakes.typesystem.type.relation.RelationArgument;
@@ -120,6 +121,66 @@ final public class EssentialAnnotationUtil {
          index++;
       }
       return corefMarkables;
+   }
+
+   /**
+    * @param corefs coreference chains
+    * @return a map of markables to indexed chain numbers
+    */
+   static public Map<IdentifiedAnnotation, Collection<Integer>> createMarkableAssertedCorefs(
+         final Collection<CollectionTextRelation> corefs,
+         final Map<Markable, IdentifiedAnnotation> markableAnnotations ) {
+      if ( corefs == null || corefs.isEmpty() ) {
+         return Collections.emptyMap();
+      }
+
+      final List<List<IdentifiedAnnotation>> chains = new ArrayList<>();
+      for ( CollectionTextRelation coref : corefs ) {
+         final Map<String, List<IdentifiedAnnotation>> assertionMap = new HashMap<>();
+         final FSList chainHead = coref.getMembers();
+         final Collection<Markable> markables = FSCollectionFactory.create( chainHead, Markable.class );
+         for ( Markable markable : markables ) {
+            final IdentifiedAnnotation annotation = markableAnnotations.get( markable );
+            final String assertion = getAssertion( annotation );
+            assertionMap.computeIfAbsent( assertion, a -> new ArrayList<>() ).add( annotation );
+         }
+         for ( List<IdentifiedAnnotation> asserted : assertionMap.values() ) {
+            if ( asserted.size() > 1 ) {
+               asserted.sort( Comparator.comparingInt( Annotation::getBegin ) );
+               chains.add( asserted );
+            }
+         }
+      }
+      chains.sort( ( l1, l2 ) -> l1.get( 0 ).getBegin() - l2.get( 0 ).getBegin() );
+
+      final Map<IdentifiedAnnotation, Collection<Integer>> corefMarkables = new HashMap<>();
+      int index = 1;
+      for ( Collection<IdentifiedAnnotation> chain : chains ) {
+         for ( IdentifiedAnnotation annotation : chain ) {
+            corefMarkables.computeIfAbsent( annotation, a -> new ArrayList<>() ).add( index );
+         }
+         index++;
+      }
+      return corefMarkables;
+   }
+
+   static private String getAssertion( final IdentifiedAnnotation annotation ) {
+      final StringBuilder sb = new StringBuilder();
+      if ( annotation.getPolarity() == CONST.NE_POLARITY_NEGATION_PRESENT ) {
+         sb.append( "AFFIRMED" );
+      } else {
+         sb.append( "NEGATED" );
+      }
+      if ( annotation.getUncertainty() == CONST.NE_UNCERTAINTY_PRESENT ) {
+         sb.append( "UNCERTAIN" );
+      }
+      if ( annotation.getGeneric() ) {
+         sb.append( "GENERIC" );
+      }
+      if ( annotation.getConditional() ) {
+         sb.append( "CONDITIONAL" );
+      }
+      return sb.toString();
    }
 
    /**

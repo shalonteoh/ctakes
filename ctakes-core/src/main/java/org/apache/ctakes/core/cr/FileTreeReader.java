@@ -1,24 +1,12 @@
 package org.apache.ctakes.core.cr;
 
 import org.apache.ctakes.core.config.ConfigParameterConstants;
-import org.apache.ctakes.core.patient.PatientNoteStore;
 import org.apache.ctakes.core.pipeline.PipeBitInfo;
-import org.apache.ctakes.core.resource.FileLocator;
-import org.apache.ctakes.core.util.SourceMetadataUtil;
-import org.apache.ctakes.typesystem.type.structured.DocumentID;
-import org.apache.ctakes.typesystem.type.structured.DocumentIdPrefix;
-import org.apache.ctakes.typesystem.type.structured.DocumentPath;
 import org.apache.log4j.Logger;
-import org.apache.uima.UimaContext;
-import org.apache.uima.collection.CollectionException;
 import org.apache.uima.collection.CollectionReader;
-import org.apache.uima.fit.component.JCasCollectionReader_ImplBase;
-import org.apache.uima.fit.descriptor.ConfigurationParameter;
 import org.apache.uima.fit.factory.CollectionReaderFactory;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
-import org.apache.uima.util.Progress;
-import org.apache.uima.util.ProgressImpl;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -26,7 +14,6 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,277 +33,21 @@ import java.util.stream.Stream;
       role = PipeBitInfo.Role.READER,
       products = { PipeBitInfo.TypeProduct.DOCUMENT_ID, PipeBitInfo.TypeProduct.DOCUMENT_ID_PREFIX }
 )
-final public class FileTreeReader extends JCasCollectionReader_ImplBase {
+final public class FileTreeReader extends AbstractFileTreeReader {
 
    static private final Logger LOGGER = Logger.getLogger( "FileTreeReader" );
 
    /**
-    * Name of configuration parameter that must be set to the path of
-    * a directory containing input files.
+    * @param jCas unpopulated jcas
+    * @param file file to be read
+    * @throws IOException should anything bad happen
     */
-   @ConfigurationParameter(
-         name = ConfigParameterConstants.PARAM_INPUTDIR,
-         description = ConfigParameterConstants.DESC_INPUTDIR
-   )
-   private String _rootDirPath;
-
-   /**
-    * Name of configuration parameter that contains the character encoding used
-    * by the input files.  If not specified, the default system encoding will
-    * be used.
-    */
-   public static final String PARAM_ENCODING = "Encoding";
-   @ConfigurationParameter(
-         name = PARAM_ENCODING,
-         description = "The character encoding used by the input files.",
-         mandatory = false
-   )
-   private String _encoding;
-
-   /**
-    * Name of optional configuration parameter that specifies the extensions
-    * of the files that the collection reader will read.  Values for this
-    * parameter should not begin with a dot <code>'.'</code>.
-    */
-   public static final String PARAM_EXTENSIONS = "Extensions";
-   @ConfigurationParameter(
-         name = PARAM_EXTENSIONS,
-         description = "The extensions of the files that the collection reader will read." +
-                       "  Values for this parameter should not begin with a dot.",
-         mandatory = false
-   )
-   private String[] _explicitExtensions;
-
-   /**
-    * Name of configuration parameter that must be set to false to remove windows \r characters
-    */
-   public static final String PARAM_KEEP_CR = "KeepCR";
-   @ConfigurationParameter(
-         name = PARAM_KEEP_CR,
-         description = "Keep windows-format carriage return characters at line endings." +
-               "  This will only keep existing characters, it will not add them.",
-         mandatory = false
-   )
-   private boolean _keepCrChar = true;
-
-   /**
-    * The patient id for each note is set using a directory name.
-    * By default this is the directory directly under the root directory (PatientLevel=1).
-    * This is appropriate for files such as in rootDir=data/, file in data/patientA/Text1.txt
-    * It can be set to use directory names at any level below.
-    * For instance, using PatientLevel=2 for rootDir=data/, file in data/hospitalX/patientA/Text1.txt
-    * In this manner the notes for the same patient from several sites can be properly collated.
-    */
-   public static final String PATIENT_LEVEL = "PatientLevel";
-   @ConfigurationParameter(
-         name = PATIENT_LEVEL,
-         description = "The level in the directory hierarchy at which patient identifiers exist."
-               + "Default value is 1; directly under root input directory.",
-         mandatory = false
-   )
-   private int _patientLevel = 1;
-
-   private File _rootDir;
-   private Collection<String> _validExtensions;
-   private List<File> _files;
-   private Map<File, String> _filePatients;
-   private int _currentIndex;
-   private Map<String, Integer> _patientDocCounts = new HashMap<>();
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public void initialize( final UimaContext context ) throws ResourceInitializationException {
-      super.initialize( context );
-      try {
-         _rootDir = FileLocator.getFile( _rootDirPath );
-      } catch ( FileNotFoundException fnfE ) {
-         throw new ResourceInitializationException( fnfE );
-      }
-      _validExtensions = createValidExtensions( _explicitExtensions );
-      _currentIndex = 0;
-      if ( _rootDir.isFile() ) {
-         // does not check for valid extensions.  With one file just trust the user.
-         final String patient = _rootDir.getParentFile().getName();
-         _files = Collections.singletonList( _rootDir );
-         _filePatients = Collections.singletonMap( _rootDir, patient );
-         PatientNoteStore.getInstance().setWantedDocCount( patient, 1 );
-      } else {
-         // gather all of the files and set the document counts per patient.
-         _filePatients = new HashMap<>();
-         _files = getDescendentFiles( _rootDir, _validExtensions, 0 );
-         _patientDocCounts.forEach( ( k, v ) -> PatientNoteStore.getInstance().setWantedDocCount( k, v ) );
-      }
-   }
-
-   /**
-    * @param explicitExtensions array of file extensions as specified in the uima parameters
-    * @return a collection of dot-prefixed extensions or none if {@code explicitExtensions} is null or empty
-    */
-   static Collection<String> createValidExtensions( final String... explicitExtensions ) {
-      if ( explicitExtensions == null || explicitExtensions.length == 0 ) {
-         return Collections.emptyList();
-      }
-      if ( explicitExtensions.length == 1
-           && (explicitExtensions[ 0 ].equals( "*" ) || explicitExtensions[ 0 ].equals( ".*" )) ) {
-         return Collections.emptyList();
-      }
-      final Collection<String> validExtensions = new ArrayList<>( explicitExtensions.length );
-      for ( String extension : explicitExtensions ) {
-         if ( extension.startsWith( "." ) ) {
-            validExtensions.add( extension );
-         } else {
-            validExtensions.add( '.' + extension );
-         }
-      }
-      return validExtensions;
-   }
-
-   /**
-    * @param parentDir       -
-    * @param validExtensions collection of valid extensions or empty collection if all extensions are valid
-    * @param level directory level beneath the root directory
-    * @return List of files descending from the parent directory
-    */
-   private List<File> getDescendentFiles( final File parentDir,
-                                          final Collection<String> validExtensions,
-                                          final int level ) {
-      final File[] children = parentDir.listFiles();
-      if ( children == null || children.length == 0 ) {
-         return Collections.emptyList();
-      }
-      final Collection<File> childDirs = new ArrayList<>();
-      final List<File> descendentFiles = new ArrayList<>();
-      for ( File child : children ) {
-         if ( child.isDirectory() ) {
-            childDirs.add( child );
-            continue;
-         }
-         if ( isExtensionValid( child, validExtensions ) && !child.isHidden() ) {
-            descendentFiles.add( child );
-         }
-      }
-      // TODO copy in TextNumberComparator and delegate ...
-//      Collections.sort( descendentFiles, FileComparator );
-      for ( File childDir : childDirs ) {
-         descendentFiles.addAll( getDescendentFiles( childDir, validExtensions, level + 1 ) );
-      }
-      if ( level == _patientLevel ) {
-         final String patientId = parentDir.getName();
-         final int count = _patientDocCounts.getOrDefault( patientId, 0 );
-         _patientDocCounts.put( patientId, count + descendentFiles.size() );
-         descendentFiles.forEach( f -> _filePatients.put( f, patientId ) );
-      }
-      return descendentFiles;
-   }
-
-   /**
-    * @param file            -
-    * @param validExtensions -
-    * @return true if validExtensions is empty or contains an extension belonging to the given file
-    */
-   static boolean isExtensionValid( final File file, final Collection<String> validExtensions ) {
-      if ( validExtensions.isEmpty() ) {
-         return true;
-      }
-      final String fileName = file.getName();
-      for ( String extension : validExtensions ) {
-         if ( fileName.endsWith( extension ) ) {
-            if ( fileName.equals( extension ) ) {
-               LOGGER.warn( "File " + file.getPath() + " is named as extension " + extension + " ; discarded" );
-               return false;
-            }
-            return true;
-         }
-      }
-      return false;
-   }
-
-   /**
-    * @param file            -
-    * @param validExtensions -
-    * @return the file name with the longest valid extension removed
-    */
-   static String createDocumentID( final File file, final Collection<String> validExtensions ) {
-      final String fileName = file.getName();
-      String maxExtension = "";
-      for ( String extension : validExtensions ) {
-         if ( fileName.endsWith( extension ) && extension.length() > maxExtension.length() ) {
-            maxExtension = extension;
-         }
-      }
-      int lastDot = fileName.lastIndexOf( '.' );
-      if ( !maxExtension.isEmpty() ) {
-         lastDot = fileName.length() - maxExtension.length();
-      }
-      if ( lastDot < 0 ) {
-         return fileName;
-      }
-      return fileName.substring( 0, lastDot );
-   }
-
-   /**
-    * @param file    -
-    * @param rootDir -
-    * @return the subdirectory path between the root directory and the file
-    */
-   static private String createDocumentIdPrefix( final File file, final File rootDir ) {
-      final String parentPath = file.getParent();
-      final String rootPath = rootDir.getPath();
-      if ( parentPath.equals( rootPath ) || !parentPath.startsWith( rootPath ) ) {
-         return "";
-      }
-      return parentPath.substring( rootPath.length() + 1 );
-   }
-
-   /**
-    * Gets the total number of documents that will be returned by this
-    * collection reader.  This is not part of the general collection reader
-    * interface.
-    *
-    * @return the number of documents in the collection
-    */
-   public int getNumberOfDocuments() {
-      return _files.size();
-   }
-
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public boolean hasNext() {
-      return _currentIndex < _files.size();
-   }
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public void getNext( final JCas jcas ) throws IOException, CollectionException {
-      final File file = _files.get( _currentIndex );
-      _currentIndex++;
+   protected void readFile( final JCas jCas, final File file ) throws IOException {
       String docText = readFile( file );
-      if ( !docText.isEmpty() && !docText.endsWith( "\n" ) ) {
-         // Make sure that we end with a newline
-         docText += "\n";
-      }
-      jcas.setDocumentText( docText );
-      final DocumentID documentId = new DocumentID( jcas );
-      final String id = createDocumentID( file, _validExtensions );
-      documentId.setDocumentID( id );
-      documentId.addToIndexes();
-      final DocumentIdPrefix documentIdPrefix = new DocumentIdPrefix( jcas );
-      final String idPrefix = createDocumentIdPrefix( file, _rootDir );
-      documentIdPrefix.setDocumentIdPrefix( idPrefix );
-      documentIdPrefix.addToIndexes();
-      final String patientId = _filePatients.get( file );
-      SourceMetadataUtil.setPatientIdentifier( jcas, patientId );
-      final DocumentPath documentPath = new DocumentPath( jcas );
-      documentPath.setDocumentPath( file.getAbsolutePath() );
-      documentPath.addToIndexes();
+      docText = handleTextEol( docText );
+      jCas.setDocumentText( docText );
    }
+
 
    /**
     * Reads file using a Path and stream.  Failing that it calls {@link #readByBuffer(File)}
@@ -326,8 +57,8 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
     * @throws IOException if the file could not be read
     */
    private String readFile( final File file ) throws IOException {
-      LOGGER.info( "Reading " + file.getPath() );
-      if ( !_keepCrChar ) {
+      LOGGER.info( "Reading " + file.getPath() + " ..." );
+      if ( !isKeepCrChar() ) {
          try {
             return readByPath( file );
          } catch ( IOException ioE ) {
@@ -347,8 +78,9 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
     * @throws IOException if the file could not be read
     */
    private String readByPath( final File file ) throws IOException {
-      if ( _encoding != null && !_encoding.isEmpty() ) {
-         final Charset charset = Charset.forName( _encoding );
+      final String encoding = getValidEncoding();
+      if ( encoding != null && !encoding.isEmpty() && !UNKNOWN.equals( encoding ) ) {
+         final Charset charset = Charset.forName( encoding );
          try ( Stream<String> stream = Files.lines( file.toPath(), charset ) ) {
             return stream.collect( Collectors.joining( "\n" ) );
          }
@@ -372,6 +104,7 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
     * @throws IOException if the file could not be read
     */
    private String readByBuffer( final File file ) throws IOException {
+      final String encoding = getValidEncoding();
       // Use 8KB as the default buffer size
       byte[] buffer = new byte[ 8192 ];
       final StringBuilder sb = new StringBuilder();
@@ -381,8 +114,8 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
             if ( length < 0 ) {
                break;
             }
-            if ( _encoding != null ) {
-               sb.append( new String( buffer, 0, length, _encoding ) );
+            if ( encoding != null && !encoding.isEmpty() && !UNKNOWN.equals( encoding ) ) {
+               sb.append( new String( buffer, 0, length, encoding ) );
             } else {
                sb.append( new String( buffer, 0, length ) );
             }
@@ -392,24 +125,6 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
       }
       return sb.toString();
    }
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public void close() throws IOException {
-   }
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public Progress[] getProgress() {
-      return new Progress[] {
-            new ProgressImpl( _currentIndex, _files.size(), Progress.ENTITIES )
-      };
-   }
-
 
    /**
     * Convenience method to create a reader with an input directory

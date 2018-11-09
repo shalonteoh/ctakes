@@ -157,27 +157,31 @@ final public class ParagraphAnnotator extends JCasAnnotator_ImplBase {
          if ( leftBounds.getValue1() > 0 ) {
             // Add unspecified generic first paragraph
             paragraphEnd = leftBounds.getValue1();
-            final Paragraph paragraph = new Paragraph( jcas, offset, offset + paragraphEnd );
-            paragraph.addToIndexes();
+            if ( offset < 0 || offset + paragraphEnd < 0 ) {
+               LOGGER.error( "First Paragraph out of bounds " + offset + "," + (offset + paragraphEnd) );
+            } else {
+               final Paragraph paragraph = new Paragraph( jcas, offset, offset + paragraphEnd );
+               paragraph.addToIndexes();
+            }
             // will start the next paragraph with bounds at 0
          }
          final int length = boundsList.size();
          // add segments 1 -> n
          for ( int i = 0; i < length; i++ ) {
             leftBounds = boundsList.get( i );
-            final int paragraphBegin = leftBounds.getValue2();
+            final int paragraphBegin = leftBounds.getValue1();
             if ( i + 1 < length ) {
                paragraphEnd = boundsList.get( i + 1 ).getValue1();
             } else {
                // the last paragraph
                paragraphEnd = text.length();
             }
-            if ( paragraphEnd - paragraphBegin <= 1 ) {
-               // a length <= 1 means that we have one tag right after another, so the paragraph is empty
-               continue;
+            if ( offset + paragraphBegin < 0 || offset + paragraphEnd < 0 ) {
+               LOGGER.error( "Paragraph out of bounds " + (offset + paragraphBegin) + "," + (offset + paragraphEnd) );
+            } else {
+               final Paragraph paragraph = new Paragraph( jcas, offset + paragraphBegin, offset + paragraphEnd );
+               paragraph.addToIndexes();
             }
-            final Paragraph paragraph = new Paragraph( jcas, offset + paragraphBegin, offset + paragraphEnd );
-            paragraph.addToIndexes();
          }
       }
    }

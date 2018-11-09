@@ -1,11 +1,15 @@
 package org.apache.ctakes.core.cr;
 
 import org.apache.ctakes.core.config.ConfigParameterConstants;
+import org.apache.ctakes.core.note.NoteSpecs;
+import org.apache.ctakes.core.patient.PatientNoteStore;
 import org.apache.ctakes.core.resource.FileLocator;
 import org.apache.ctakes.core.util.NumberedSuffixComparator;
+import org.apache.ctakes.core.util.SourceMetadataUtil;
 import org.apache.ctakes.typesystem.type.structured.DocumentID;
 import org.apache.ctakes.typesystem.type.structured.DocumentIdPrefix;
 import org.apache.ctakes.typesystem.type.structured.DocumentPath;
+import org.apache.ctakes.typesystem.type.structured.SourceData;
 import org.apache.log4j.Logger;
 import org.apache.uima.UimaContext;
 import org.apache.uima.collection.CollectionException;
@@ -32,7 +36,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 
 /**
@@ -63,10 +70,11 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
     * be used.
     */
    static public final String PARAM_ENCODING = "Encoding";
+   static public final String UNICODE = "unicode";
    @ConfigurationParameter(
          name = PARAM_ENCODING,
          description = "The character encoding used by the input files.",
-         defaultValue = "unicode",
+//         defaultValue = UNICODE,
          mandatory = false
    )
    private String _encoding;
@@ -85,9 +93,58 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
    )
    private String[] _explicitExtensions;
 
+   /**
+    * Name of configuration parameter that must be set to false to remove windows \r characters
+    */
+   public static final String PARAM_KEEP_CR = "KeepCR";
+   @ConfigurationParameter(
+         name = PARAM_KEEP_CR,
+         description = "Keep windows-format carriage return characters at line endings." +
+                       "  This will only keep existing characters, it will not add them.",
+         mandatory = false
+   )
+   private boolean _keepCrChar = true;
+
+   /**
+    * Name of configuration parameter that must be set to true to replace windows "\r\n" sequnces with "\n ".
+    * Useful if windows Carriage Return characters wreak havoc upon trained models but text offsets must be preserved.
+    * This may not play well with components that utilize double-space sequences.
+    */
+   public static final String CR_TO_SPACE = "CRtoSpace";
+   @ConfigurationParameter(
+         name = CR_TO_SPACE,
+         description = "Change windows-format CR + LF character sequences to LF + <Space>.",
+         mandatory = false
+   )
+   private boolean _crToSpace = false;
+
+
+   /**
+    * The patient id for each note is set using a directory name.
+    * By default this is the directory directly under the root directory (PatientLevel=1).
+    * This is appropriate for files such as in rootDir=data/, file in data/patientA/Text1.txt
+    * It can be set to use directory names at any level below.
+    * For instance, using PatientLevel=2 for rootDir=data/, file in data/hospitalX/patientA/Text1.txt
+    * In this manner the notes for the same patient from several sites can be properly collated.
+    */
+   public static final String PATIENT_LEVEL = "PatientLevel";
+   @ConfigurationParameter(
+         name = PATIENT_LEVEL,
+         description = "The level in the directory hierarchy at which patient identifiers exist."
+                       + "Default value is 1; directly under root input directory.",
+         mandatory = false
+   )
+   private int _patientLevel = 1;
+
+   static protected final String UNKNOWN = "Unknown";
+   static private final DateFormat DATE_FORMAT = new SimpleDateFormat( "yyyyMMddhhmm" );
+   static private final Pattern CR_LF = Pattern.compile( "\\r\\n" );
+
    private File _rootDir;
    private Collection<String> _validExtensions;
    private List<File> _files;
+   private Map<File, String> _filePatients;
+   private Map<String, Integer> _patientDocCounts = new HashMap<>();
    private int _currentIndex;
    private Comparator<File> _fileComparator;
 
@@ -108,6 +165,10 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
     */
    protected Comparator<File> createFileComparator() {
       return new FileComparator();
+   }
+
+   public DateFormat getDateFormat() {
+      return DATE_FORMAT;
    }
 
    /**
@@ -148,15 +209,15 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
    }
 
    /**
-    * @return any specified valid file encodings.  If none are specified then the default is "Unicode".
+    * @return any specified valid file encodings.  If none are specified then the default is {@link #UNKNOWN}.
     */
    final protected String getValidEncoding() {
       if ( _rootDir == null ) {
          LOGGER.error( "Not yet initialized" );
-         return "Unknown";
+         return UNKNOWN;
       }
       if ( _encoding == null || _encoding.isEmpty() ) {
-         return "Unicode";
+         return UNKNOWN;
       }
       return _encoding;
    }
@@ -185,16 +246,36 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
          throw new ResourceInitializationException( fnfE );
       }
       _validExtensions = createValidExtensions( _explicitExtensions );
-
       _currentIndex = 0;
-      _files = getDescendentFiles( getRootDir(), getValidExtensions() );
+      if ( _rootDir.isFile() ) {
+         // does not check for valid extensions.  With one file just trust the user.
+         final String patient = _rootDir.getParentFile().getName();
+         _files = Collections.singletonList( _rootDir );
+         _filePatients = Collections.singletonMap( _rootDir, patient );
+         PatientNoteStore.getInstance().setWantedDocCount( patient, 1 );
+      } else {
+         // gather all of the files and set the document counts per patient.
+         final File[] children = _rootDir.listFiles();
+         if ( children == null || children.length == 0 ) {
+            _filePatients = Collections.emptyMap();
+            _files = Collections.emptyList();
+            return;
+         }
+         if ( Arrays.stream( children ).noneMatch( File::isDirectory ) ) {
+            _patientLevel = 0;
+         }
+         _filePatients = new HashMap<>();
+         _fileComparator = createFileComparator();
+         _files = getDescendentFiles( _rootDir, _validExtensions, 0 );
+         _patientDocCounts.forEach( ( k, v ) -> PatientNoteStore.getInstance().setWantedDocCount( k, v ) );
+      }
    }
 
    /**
     * @param explicitExtensions array of file extensions as specified in the uima parameters
     * @return a collection of dot-prefixed extensions or none if {@code explicitExtensions} is null or empty
     */
-   static private Collection<String> createValidExtensions( final String... explicitExtensions ) {
+   static protected Collection<String> createValidExtensions( final String... explicitExtensions ) {
       if ( explicitExtensions == null || explicitExtensions.length == 0 ) {
          return Collections.emptyList();
       }
@@ -216,31 +297,38 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
    /**
     * @param parentDir       -
     * @param validExtensions collection of valid extensions or empty collection if all extensions are valid
+    * @param level           directory level beneath the root directory
     * @return List of files descending from the parent directory
     */
-   protected List<File> getDescendentFiles( final File parentDir, final Collection<String> validExtensions ) {
-      if ( _fileComparator == null ) {
-         _fileComparator = createFileComparator();
-      }
+   private List<File> getDescendentFiles( final File parentDir,
+                                          final Collection<String> validExtensions,
+                                          final int level ) {
       final File[] children = parentDir.listFiles();
       if ( children == null || children.length == 0 ) {
          return Collections.emptyList();
       }
       final List<File> childDirs = new ArrayList<>();
-      final List<File> descendentFiles = new ArrayList<>();
+      final List<File> files = new ArrayList<>();
       for ( File child : children ) {
          if ( child.isDirectory() ) {
             childDirs.add( child );
             continue;
          }
          if ( isExtensionValid( child, validExtensions ) && !child.isHidden() ) {
-            descendentFiles.add( child );
+            files.add( child );
          }
       }
-      descendentFiles.sort( _fileComparator );
       childDirs.sort( _fileComparator );
+      files.sort( _fileComparator );
+      final List<File> descendentFiles = new ArrayList<>( files );
       for ( File childDir : childDirs ) {
-         descendentFiles.addAll( getDescendentFiles( childDir, validExtensions ) );
+         descendentFiles.addAll( getDescendentFiles( childDir, validExtensions, level + 1 ) );
+      }
+      if ( level == _patientLevel ) {
+         final String patientId = parentDir.getName();
+         final int count = _patientDocCounts.getOrDefault( patientId, 0 );
+         _patientDocCounts.put( patientId, count + descendentFiles.size() );
+         descendentFiles.forEach( f -> _filePatients.put( f, patientId ) );
       }
       return descendentFiles;
    }
@@ -250,7 +338,7 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
     * @param validExtensions -
     * @return true if validExtensions is empty or contains an extension belonging to the given file
     */
-   static private boolean isExtensionValid( final File file, final Collection<String> validExtensions ) {
+   static protected boolean isExtensionValid( final File file, final Collection<String> validExtensions ) {
       if ( validExtensions.isEmpty() ) {
          return true;
       }
@@ -273,7 +361,7 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
     * @param validExtensions -
     * @return the file name with the longest valid extension removed
     */
-   protected String createDocumentID( final File file, final Collection<String> validExtensions ) {
+   static protected String createDocumentID( final File file, final Collection<String> validExtensions ) {
       final String fileName = file.getName();
       String maxExtension = "";
       for ( String extension : validExtensions ) {
@@ -305,6 +393,47 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
       return parentPath.substring( rootPath.length() + 1 );
    }
 
+   /**
+    * @param documentId -
+    * @return the file name with the longest valid extension removed
+    */
+   protected String createDocumentType( final String documentId ) {
+      final int lastScore = documentId.lastIndexOf( '_' );
+      if ( lastScore < 0 || lastScore == documentId.length() - 1 ) {
+         return NoteSpecs.ID_NAME_CLINICAL_NOTE;
+      }
+      return documentId.substring( lastScore + 1 );
+   }
+
+   /**
+    * @param file -
+    * @return the file's last modification date as a string : {@link #getDateFormat()}
+    */
+   protected String createDocumentTime( final File file ) {
+      final long millis = file.lastModified();
+      return getDateFormat().format( millis );
+   }
+
+   final protected boolean isKeepCrChar() {
+      return _keepCrChar;
+   }
+
+   /**
+    * @param text document text
+    * @return the document text with end of line characters replaced if needed
+    */
+   final protected String handleTextEol( final String text ) {
+      String docText = text;
+      if ( !isKeepCrChar() && !docText.isEmpty() && docText.contains( "\r" ) ) {
+         LOGGER.debug( "Removing Carriage-Return characters ..." );
+         docText = CR_LF.matcher( docText ).replaceAll( "\n" );
+      }
+      if ( !docText.isEmpty() && !docText.endsWith( "\n" ) ) {
+         // Make sure that we end with a newline
+         docText += "\n";
+      }
+      return docText;
+   }
 
    /**
     * {@inheritDoc}
@@ -332,6 +461,13 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
       final String idPrefix = createDocumentIdPrefix( file, getRootDir() );
       documentIdPrefix.setDocumentIdPrefix( idPrefix );
       documentIdPrefix.addToIndexes();
+      final SourceData sourceData = SourceMetadataUtil.getOrCreateSourceData( jcas );
+      final String docType = createDocumentType( id );
+      sourceData.setNoteTypeCode( docType );
+      final String docTime = createDocumentTime( file );
+      sourceData.setSourceRevisionDate( docTime );
+      final String patientId = _filePatients.get( file );
+      SourceMetadataUtil.setPatientIdentifier( jcas, patientId );
       final DocumentPath documentPath = new DocumentPath( jcas );
       documentPath.setDocumentPath( file.getAbsolutePath() );
       documentPath.addToIndexes();

@@ -5,6 +5,7 @@ import org.apache.ctakes.core.resource.FileLocator;
 import org.apache.ctakes.core.util.Pair;
 import org.apache.ctakes.core.util.regex.RegexSpanFinder;
 import org.apache.ctakes.typesystem.type.textspan.ListEntry;
+import org.apache.ctakes.typesystem.type.textspan.Paragraph;
 import org.apache.ctakes.typesystem.type.textspan.Segment;
 import org.apache.log4j.Logger;
 import org.apache.uima.UimaContext;
@@ -116,10 +117,24 @@ final public class ListAnnotator extends JCasAnnotator_ImplBase {
          LOGGER.info( "Finished processing, no list types defined" );
          return;
       }
-      for ( Segment section : JCasUtil.select( jcas, Segment.class ) ) {
-         final Map<Pair<Integer>, ListType> listTypes = findListTypes( section.getCoveredText() );
-         final Map<Pair<Integer>, ListType> uniqueListTypes = getUniqueListTypes( listTypes );
-         createLists( jcas, uniqueListTypes, section.getCoveredText(), section.getBegin() );
+      final Collection<Paragraph> paragraphs = JCasUtil.select( jcas, Paragraph.class );
+      if ( paragraphs != null && !paragraphs.isEmpty() ) {
+         for ( Paragraph paragraph : paragraphs ) {
+            try {
+               final Map<Pair<Integer>, ListType> listTypes = findListTypes( paragraph.getCoveredText() );
+               final Map<Pair<Integer>, ListType> uniqueListTypes = getUniqueListTypes( listTypes );
+               createLists( jcas, uniqueListTypes, paragraph.getCoveredText(), paragraph.getBegin() );
+            } catch ( StringIndexOutOfBoundsException oobE ) {
+               // I'm not sure how this ever happens.  Paragraph bounds from the dPheParagraphAnnotator are always valid.
+               // I have run ~1000 notes without problem, but one note in Seer causes problems.  Ignore.
+            }
+         }
+      } else {
+         for ( Segment section : JCasUtil.select( jcas, Segment.class ) ) {
+            final Map<Pair<Integer>, ListType> listTypes = findListTypes( section.getCoveredText() );
+            final Map<Pair<Integer>, ListType> uniqueListTypes = getUniqueListTypes( listTypes );
+            createLists( jcas, uniqueListTypes, section.getCoveredText(), section.getBegin() );
+         }
       }
       LOGGER.info( "Finished processing" );
    }
@@ -164,12 +179,16 @@ final public class ListAnnotator extends JCasAnnotator_ImplBase {
                if ( boundsJ.getValue1() >= boundsI.getValue1() && boundsJ.getValue1() <= boundsI.getValue2() ) {
                   removalTypeBounds.add( boundsJ );
                   if ( boundsJ.getValue2() > boundsI.getValue2() ) {
-                     newTypeBounds.put( new Pair<>( boundsI.getValue1(), boundsJ.getValue2() ), boundsI );
+//                     newTypeBounds.put( new Pair<>( boundsI.getValue1(), boundsJ.getValue2() ), boundsI );
+                     // Add J as a second list
+                     newTypeBounds.put( new Pair<>( boundsI.getValue2(), boundsJ.getValue2() ), boundsJ );
                   }
                } else if ( boundsJ.getValue2() >= boundsI.getValue1() && boundsJ.getValue2() <= boundsI.getValue2() ) {
                   removalTypeBounds.add( boundsJ );
                   if ( boundsJ.getValue1() < boundsI.getValue1() ) {
-                     newTypeBounds.put( new Pair<>( boundsJ.getValue1(), boundsI.getValue2() ), boundsI );
+//                     newTypeBounds.put( new Pair<>( boundsJ.getValue1(), boundsI.getValue2() ), boundsI );
+                     // Add J as a second list
+                     newTypeBounds.put( new Pair<>( boundsJ.getValue1(), boundsI.getValue1() ), boundsJ );
                   }
                }
             }

@@ -7,8 +7,11 @@ import org.apache.ctakes.fhir.resource.*;
 import org.apache.ctakes.fhir.util.FhirNoteSpecs;
 import org.apache.ctakes.typesystem.type.relation.BinaryTextRelation;
 import org.apache.ctakes.typesystem.type.relation.RelationArgument;
+import org.apache.ctakes.typesystem.type.syntax.BaseToken;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
+import org.apache.ctakes.typesystem.type.textspan.Paragraph;
 import org.apache.ctakes.typesystem.type.textspan.Segment;
+import org.apache.ctakes.typesystem.type.textspan.Sentence;
 import org.apache.log4j.Logger;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
@@ -19,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Creates a complete fhir bundle for a note.
@@ -38,15 +42,17 @@ final public class FhirDocComposer {
    /**
     * @param jCas         ye olde ...
     * @param practitioner fhir practitioner.  Usually the default "ctakes" practitioner.
+    * @param writeNlpFhir write all nlp information (paragraph, sentence, base annotations) to fhir.
     * @return a complete fhir bundle for a note.
     */
-   static public Bundle composeDocFhir( final JCas jCas, final FhirPractitioner practitioner ) {
+   static public Bundle composeDocFhir( final JCas jCas, final FhirPractitioner practitioner,
+                                        final boolean writeNlpFhir ) {
       final FhirNoteSpecs noteSpecs = new FhirNoteSpecs( jCas );
       // creators
       final CompositionCreator compositionCreator = new CompositionCreator();
-      final FhirResourceCreator<Segment, Basic> sectionCreator = new SectionBasicCreator();
-      final FhirResourceCreator<IdentifiedAnnotation, Basic> iaCreator = new IdentifiedAnnotationBasicCreator();
-      final FhirResourceCreator<Annotation, Basic> aCreator = new AnnotationBasicCreator();
+      final FhirResourceCreator<Segment, Basic> sectionCreator = new SectionCreator();
+      final FhirResourceCreator<IdentifiedAnnotation, Basic> iaCreator = new IdentifiedAnnotationCreator();
+      final FhirResourceCreator<Annotation, Basic> aCreator = new AnnotationCreator();
       // essential types
       final Map<Segment, Collection<IdentifiedAnnotation>> sectionAnnotationMap
             = JCasUtil.indexCovered( jCas, Segment.class, IdentifiedAnnotation.class );
@@ -62,7 +68,7 @@ final public class FhirDocComposer {
          final String segmentId = segment.getId();
          final Basic section = sectionCreator.createResource( jCas, sectionAnnotations.getKey(), practitioner,
                noteSpecs );
-         if ( !segmentId.isEmpty() && !segmentId.equals( SIMPLE_SECTION ) ) {
+         if ( writeNlpFhir || (!segmentId.isEmpty() && !segmentId.equals( SIMPLE_SECTION )) ) {
             sections.add( section );
          }
          final Reference sectionRef = new Reference( section );
@@ -85,6 +91,14 @@ final public class FhirDocComposer {
       }
       // Add relations as reference extensions.
       final Map<Annotation, Basic> simpleAnnotationBasics = new HashMap<>();
+
+      if ( writeNlpFhir ) {
+         final BaseTokenCreator baseTokenCreator = new BaseTokenCreator();
+         JCasUtil.select( jCas, BaseToken.class )
+                 .forEach( b -> simpleAnnotationBasics.put( b,
+                       baseTokenCreator.createResource( jCas, b, practitioner, noteSpecs ) ) );
+      }
+
       addRelations( jCas, practitioner, noteSpecs, aCreator, annotationBasics, simpleAnnotationBasics );
       // Create a Bundle
       final Composition composition = compositionCreator.createResource( jCas, null, practitioner, noteSpecs );
@@ -95,6 +109,23 @@ final public class FhirDocComposer {
       addBundleResources( bundle, sections );
       addBundleResources( bundle, annotationBasics.values() );
       addBundleResources( bundle, simpleAnnotationBasics.values() );
+
+      if ( writeNlpFhir ) {
+         final ParagraphCreator paragraphCreator = new ParagraphCreator();
+         final Collection<Basic> paragraphs
+               = JCasUtil.select( jCas, Paragraph.class ).stream()
+                         .map( p -> paragraphCreator.createResource( jCas, p, practitioner, noteSpecs ) )
+                         .collect( Collectors.toList() );
+         addBundleResources( bundle, paragraphs );
+
+         final SentenceCreator sentenceCreator = new SentenceCreator();
+         final Collection<Basic> sentences
+               = JCasUtil.select( jCas, Sentence.class ).stream()
+                         .map( s -> sentenceCreator.createResource( jCas, s, practitioner, noteSpecs ) )
+                         .collect( Collectors.toList() );
+         addBundleResources( bundle, sentences );
+      }
+
       return bundle;
    }
 

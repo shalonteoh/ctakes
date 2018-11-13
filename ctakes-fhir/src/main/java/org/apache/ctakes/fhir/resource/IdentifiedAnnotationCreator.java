@@ -10,15 +10,13 @@ import org.apache.uima.jcas.JCas;
 import org.hl7.fhir.dstu3.model.Basic;
 import org.hl7.fhir.dstu3.model.Extension;
 
-import java.util.Date;
-
 
 /**
  * @author SPF , chip-nlp
  * @version %I%
  * @since 12/25/2017
  */
-final public class IdentifiedAnnotationBasicCreator implements FhirResourceCreator<IdentifiedAnnotation, Basic> {
+final public class IdentifiedAnnotationCreator implements FhirBasicCreator<IdentifiedAnnotation> {
 
    static private final Logger LOGGER = Logger.getLogger( "IdentifiedAnnotationBasicCreator" );
 
@@ -33,22 +31,23 @@ final public class IdentifiedAnnotationBasicCreator implements FhirResourceCreat
     * {@inheritDoc}
     */
    @Override
+   public String getIdName() {
+      return ID_NAME_IDENTIFIED_ANNOTATION;
+   }
+
+   /**
+    * {@inheritDoc}
+    */
+   @Override
    public Basic createResource( final JCas jCas, final IdentifiedAnnotation annotation,
                                 final FhirPractitioner practitioner, final FhirNoteSpecs noteSpecs ) {
-      final Basic basic = new Basic();
-      // The 'id' is name of the Resource type (class).  e.g. DiseaseDisorderMention
-      basic.setId( FhirElementFactory.createId( jCas, ID_NAME_IDENTIFIED_ANNOTATION, annotation.hashCode() ) );
+      final Basic basic = createAnnotationBasic( jCas, annotation, practitioner );
+
       // The 'code' is the full ontology concept array: cuis, snomeds, urls, preferred text, PLUS covered text.
       basic.setCode( FhirElementFactory.createPrimaryCode( annotation ) );
+
       // Add Subject reference.
       basic.setSubject( noteSpecs.getSubjectReference( annotation.getSubject() ) );
-      // Add Creation Date as now.
-      basic.setCreated( new Date() );
-      // Add Author (ctakes).
-      basic.setAuthor( practitioner.getPractitionerReference() );
-      // Add text span as an extension.
-      basic.addExtension( FhirElementFactory.createSpanBegin( annotation ) );
-      basic.addExtension( FhirElementFactory.createSpanEnd( annotation ) );
       // Add DocTimeRel as an extension.
       if ( annotation instanceof EventMention ) {
          final Extension dtr = FhirElementFactory.createDocTimeRel( (EventMention) annotation );

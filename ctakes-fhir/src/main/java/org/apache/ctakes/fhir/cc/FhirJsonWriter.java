@@ -20,8 +20,9 @@ import org.hl7.fhir.dstu3.model.Bundle;
  * @since 12/20/2017
  */
 @PipeBitInfo(
-      name = "FhirJsonWriter",
-      description = "For ctakes_401.", role = PipeBitInfo.Role.WRITER
+      name = "FHIR JSON Writer",
+      description = "Writes Json to standard output with full representation of input text and all extracted information.",
+      role = PipeBitInfo.Role.WRITER
 )
 final public class FhirJsonWriter extends JCasAnnotator_ImplBase {
 
@@ -46,7 +47,7 @@ final public class FhirJsonWriter extends JCasAnnotator_ImplBase {
    public void process( final JCas jCas ) throws AnalysisEngineProcessException {
       LOGGER.info( "Processing ..." );
 
-      final Bundle bundle = FhirDocComposer.composeDocFhir( jCas, PractitionerCtakes.getInstance() );
+      final Bundle bundle = FhirDocComposer.composeDocFhir( jCas, PractitionerCtakes.getInstance(), false );
 
       final FhirContext fhirContext = FhirContext.forDstu3();
       final IParser jsonParser = fhirContext.newJsonParser();

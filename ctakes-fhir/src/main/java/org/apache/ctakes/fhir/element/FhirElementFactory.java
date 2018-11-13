@@ -9,6 +9,8 @@ import org.apache.ctakes.typesystem.type.refsem.Event;
 import org.apache.ctakes.typesystem.type.refsem.EventProperties;
 import org.apache.ctakes.typesystem.type.refsem.OntologyConcept;
 import org.apache.ctakes.typesystem.type.refsem.UmlsConcept;
+import org.apache.ctakes.typesystem.type.syntax.BaseToken;
+import org.apache.ctakes.typesystem.type.syntax.WordToken;
 import org.apache.ctakes.typesystem.type.textsem.EventMention;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
 import org.apache.log4j.Logger;
@@ -20,7 +22,7 @@ import org.hl7.fhir.utilities.xhtml.XhtmlNode;
 import java.util.Collection;
 import java.util.Date;
 
-import static org.apache.ctakes.fhir.resource.SectionBasicCreator.SECTION_EXT;
+import static org.apache.ctakes.fhir.resource.SectionCreator.SECTION_EXT;
 
 /**
  * @author SPF , chip-nlp
@@ -42,6 +44,7 @@ final public class FhirElementFactory {
    static public final String CODING_CUI = "cui";
    static public final String CODING_TUI = "tui";
    static public final String CODING_SEMANTIC = "semantic-group";
+   static public final String CODING_PART_OF_SPEECH = "part-of-speech";
 
    static public final char DIVIDER_CHAR = '-';
 
@@ -91,12 +94,27 @@ final public class FhirElementFactory {
    }
 
    /**
+    * @param baseToken -
+    * @return annotation type, part of speech and covered text in a fhir codeable concept.
+    */
+   static public CodeableConcept createPosCode( final BaseToken baseToken ) {
+      final CodeableConcept codeableConcept = createSimpleCode( baseToken );
+      if ( baseToken instanceof WordToken ) {
+         // We are only interested in tokens that are -words-
+         final String pos = baseToken.getPartOfSpeech();
+         codeableConcept.addCoding( new Coding( CODING_PART_OF_SPEECH, pos, "" ) );
+      }
+      return codeableConcept;
+   }
+
+   /**
     * @param annotation -
     * @return annotation type and covered text in a fhir codeable concept.
     */
    static public CodeableConcept createSimpleCode( final org.apache.uima.jcas.tcas.Annotation annotation ) {
       final String type = annotation.getType()
-            .getShortName();
+//            .getShortName();
+                                    .getName();
       return createSimpleCode( CODING_TYPE_SYSTEM, type, null, annotation.getCoveredText() );
    }
 

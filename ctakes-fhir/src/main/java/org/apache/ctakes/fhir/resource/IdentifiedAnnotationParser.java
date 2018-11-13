@@ -1,7 +1,6 @@
 package org.apache.ctakes.fhir.resource;
 
 import org.apache.ctakes.core.semantic.SemanticGroup;
-import org.apache.ctakes.core.util.Pair;
 import org.apache.ctakes.fhir.element.FhirElementParser;
 import org.apache.ctakes.typesystem.type.constants.CONST;
 import org.apache.ctakes.typesystem.type.refsem.Event;
@@ -21,7 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.apache.ctakes.fhir.element.FhirElementFactory.*;
-import static org.apache.ctakes.fhir.resource.IdentifiedAnnotationBasicCreator.*;
+import static org.apache.ctakes.fhir.resource.IdentifiedAnnotationCreator.*;
 
 
 /**
@@ -29,7 +28,7 @@ import static org.apache.ctakes.fhir.resource.IdentifiedAnnotationBasicCreator.*
  * @version %I%
  * @since 1/22/2018
  */
-final public class IdentifiedAnnotationBasicParser implements FhirResourceParser<IdentifiedAnnotation, Basic> {
+final public class IdentifiedAnnotationParser implements FhirBasicParser<IdentifiedAnnotation> {
 
    static private final Logger LOGGER = Logger.getLogger( "IdentifiedAnnotationBasicParser" );
 
@@ -53,16 +52,11 @@ final public class IdentifiedAnnotationBasicParser implements FhirResourceParser
       }
       annotation.setOntologyConceptArr( conceptArr );
       // text span
-      final List<Extension> extensions = resource.getExtension();
-      final Pair<Integer> textSpan = FhirElementParser.getTextSpan( extensions );
-      if ( textSpan == null ) {
-         LOGGER.error( "Could not parse text span for annotation basic " + resource.getId() );
-         return null;
-      }
-      annotation.setBegin( textSpan.getValue1() );
-      annotation.setEnd( textSpan.getValue2() );
+      addTextSpan( annotation, resource, LOGGER );
 
       // Set properties
+      final List<Extension> extensions = resource.getExtension();
+      extensions.addAll( resource.getModifierExtension() );
       if ( FhirElementParser.hasExtension( GENERIC_EXT, extensions ) ) {
          annotation.setGeneric( true );
       }
@@ -76,6 +70,7 @@ final public class IdentifiedAnnotationBasicParser implements FhirResourceParser
          annotation.setHistoryOf( CONST.NE_HISTORY_OF_PRESENT );
       }
       // TODO subject
+      annotation.setSubject( FhirElementParser.getSubjectId( resource ) );
       if ( annotation instanceof EventMention ) {
          final Event event = createEvent( jCas, extensions );
          if ( event != null ) {

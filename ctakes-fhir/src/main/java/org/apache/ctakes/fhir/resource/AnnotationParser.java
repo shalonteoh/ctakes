@@ -1,7 +1,5 @@
 package org.apache.ctakes.fhir.resource;
 
-import org.apache.ctakes.core.util.Pair;
-import org.apache.ctakes.fhir.element.FhirElementParser;
 import org.apache.log4j.Logger;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
@@ -20,7 +18,7 @@ import static org.apache.ctakes.fhir.element.FhirElementFactory.CODING_TYPE_SYST
  * @version %I%
  * @since 1/22/2018
  */
-final public class AnnotationBasicParser implements FhirResourceParser<Annotation, Basic> {
+final public class AnnotationParser implements FhirBasicParser<Annotation> {
 
    static private final Logger LOGGER = Logger.getLogger( "AnnotationBasicParser" );
 
@@ -34,13 +32,7 @@ final public class AnnotationBasicParser implements FhirResourceParser<Annotatio
          }
       }
       final Annotation annotation = createAnnotation( jCas, className );
-      final Pair<Integer> textSpan = FhirElementParser.getTextSpan( resource.getExtension() );
-      if ( textSpan == null ) {
-         LOGGER.error( "Could not parse text span for annotation basic " + resource.getId() );
-         return null;
-      }
-      annotation.setBegin( textSpan.getValue1() );
-      annotation.setEnd( textSpan.getValue2() );
+      addTextSpan( annotation, resource, LOGGER );
       return annotation;
    }
 

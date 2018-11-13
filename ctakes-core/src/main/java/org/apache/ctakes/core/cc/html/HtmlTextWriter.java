@@ -721,7 +721,7 @@ final public class HtmlTextWriter extends AbstractJCasFileWriter {
     */
    static private void writeSectionHeader( final Segment section, final BufferedWriter writer ) throws IOException {
       String sectionId = section.getId();
-      if ( sectionId.equals( "SIMPLE_SEGMENT" ) ) {
+      if ( sectionId == null || sectionId.equals( "SIMPLE_SEGMENT" ) ) {
          return;
       }
       final StringBuilder sb = new StringBuilder();

@@ -1,7 +1,5 @@
 package org.apache.ctakes.fhir.resource;
 
-import org.apache.ctakes.core.util.Pair;
-import org.apache.ctakes.fhir.element.FhirElementParser;
 import org.apache.ctakes.typesystem.type.textspan.Segment;
 import org.apache.log4j.Logger;
 import org.apache.uima.jcas.JCas;
@@ -11,8 +9,8 @@ import org.hl7.fhir.dstu3.model.Coding;
 
 import java.util.List;
 
-import static org.apache.ctakes.fhir.resource.SectionBasicCreator.CODING_SECTION_ID;
-import static org.apache.ctakes.fhir.resource.SectionBasicCreator.CODING_SECTION_NAME;
+import static org.apache.ctakes.fhir.resource.SectionCreator.CODING_SECTION_ID;
+import static org.apache.ctakes.fhir.resource.SectionCreator.CODING_SECTION_NAME;
 
 
 /**
@@ -20,7 +18,7 @@ import static org.apache.ctakes.fhir.resource.SectionBasicCreator.CODING_SECTION
  * @version %I%
  * @since 1/22/2018
  */
-final public class SectionBasicParser implements FhirResourceParser<Segment, Basic> {
+final public class SectionParser implements FhirBasicParser<Segment> {
 
    static private final Logger LOGGER = Logger.getLogger( "SectionBasicParser" );
 
@@ -38,17 +36,13 @@ final public class SectionBasicParser implements FhirResourceParser<Segment, Bas
          }
       }
       final String tagText = codeableConcept.getText();
-      final Pair<Integer> textSpan = FhirElementParser.getTextSpan( resource.getExtension() );
-      if ( textSpan == null ) {
-         LOGGER.error( "Could not parse text span for section " + preferredText );
-         return null;
-      }
       final Segment segment = new Segment( jCas );
-      segment.setBegin( textSpan.getValue1() );
-      segment.setEnd( textSpan.getValue2() );
+      addTextSpan( segment, resource, LOGGER );
       segment.setPreferredText( preferredText );
       segment.setTagText( tagText );
-      if ( !id.isEmpty() ) {
+      if ( id.isEmpty() ) {
+         segment.setId( "SIMPLE_SEGMENT" );
+      } else {
          segment.setId( id );
       }
       return segment;

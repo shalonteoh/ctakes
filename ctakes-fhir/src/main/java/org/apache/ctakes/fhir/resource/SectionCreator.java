@@ -9,15 +9,13 @@ import org.hl7.fhir.dstu3.model.Basic;
 import org.hl7.fhir.dstu3.model.CodeableConcept;
 import org.hl7.fhir.dstu3.model.Coding;
 
-import java.util.Date;
-
 
 /**
  * @author SPF , chip-nlp
  * @version %I%
  * @since 12/25/2017
  */
-final public class SectionBasicCreator implements FhirResourceCreator<Segment, Basic> {
+final public class SectionCreator implements FhirBasicCreator<Segment> {
 
    static private final Logger LOGGER = Logger.getLogger( "SectionBasicCreator" );
 
@@ -31,11 +29,18 @@ final public class SectionBasicCreator implements FhirResourceCreator<Segment, B
     * {@inheritDoc}
     */
    @Override
+   public String getIdName() {
+      return ID_NAME_SECTION;
+   }
+
+   /**
+    * {@inheritDoc}
+    */
+   @Override
    public Basic createResource( final JCas jCas, final Segment section, final FhirPractitioner practitioner,
                                 final FhirNoteSpecs noteSpecs ) {
-      final Basic basic = new Basic();
-      // The 'id' is name of the Resource type (class).  e.g. DiseaseDisorderMention
-      basic.setId( FhirElementFactory.createId( jCas, ID_NAME_SECTION, section.hashCode() ) );
+      final Basic basic = createAnnotationBasic( jCas, section, practitioner );
+
       // The 'code' is the normalized section name PLUS section tag text.
       final CodeableConcept codeableConcept = FhirElementFactory.createSimpleCode( section );
       codeableConcept.addCoding( new Coding( CODING_SECTION_NAME, section.getPreferredText(), null ) );
@@ -45,13 +50,7 @@ final public class SectionBasicCreator implements FhirResourceCreator<Segment, B
       }
       codeableConcept.setText( section.getTagText() );
       basic.setCode( codeableConcept );
-      // Add Creation Date as now.
-      basic.setCreated( new Date() );
-      // Add Author (ctakes).
-      basic.setAuthor( practitioner.getPractitionerReference() );
-      // Add text span as an extension.
-      basic.addExtension( FhirElementFactory.createSpanBegin( section ) );
-      basic.addExtension( FhirElementFactory.createSpanEnd( section ) );
+
       return basic;
    }
 

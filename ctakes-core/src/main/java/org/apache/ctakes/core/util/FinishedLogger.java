@@ -8,6 +8,7 @@ import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 
+import java.lang.management.ManagementFactory;
 import java.util.Date;
 
 /**
@@ -24,13 +25,8 @@ final public class FinishedLogger extends JCasAnnotator_ImplBase {
 
    static private final Logger LOGGER = Logger.getLogger( "FinishedLogger" );
 
-   private final long _instantMillis;
    private long _initMillis;
    private long _docCount = 0;
-
-   public FinishedLogger() {
-      _instantMillis = System.currentTimeMillis();
-   }
 
    /**
     * {@inheritDoc}
@@ -52,13 +48,14 @@ final public class FinishedLogger extends JCasAnnotator_ImplBase {
    public void collectionProcessComplete() throws AnalysisEngineProcessException {
       super.collectionProcessComplete();
       final long endMillis = System.currentTimeMillis();
+      final long instantMillis = ManagementFactory.getRuntimeMXBean().getStartTime();
 
-      LOGGER.info( "Run Start Time:               " + getTime( _instantMillis ) );
+      LOGGER.info( "Run Start Time:               " + getTime( instantMillis ) );
       LOGGER.info( "Processing Start Time:        " + getTime( _initMillis ) );
       LOGGER.info( "Processing End Time:          " + getTime( endMillis ) );
-      LOGGER.info( "Initialization Time Elapsed:  " + getSpan( _initMillis - _instantMillis ) );
+      LOGGER.info( "Initialization Time Elapsed:  " + getSpan( _initMillis - instantMillis ) );
       LOGGER.info( "Processing Time Elapsed:      " + getSpan( endMillis - _initMillis ) );
-      LOGGER.info( "Total Run Time Elapsed:       " + getSpan( endMillis - _instantMillis ) );
+      LOGGER.info( "Total Run Time Elapsed:       " + getSpan( endMillis - instantMillis ) );
       LOGGER.info( "Documents Processed:          " + _docCount );
       final long millisPerNote = (endMillis - _initMillis) / _docCount;
       LOGGER.info( String.format( "Average Seconds per Document: %.2f", (millisPerNote / 1000f) ) );

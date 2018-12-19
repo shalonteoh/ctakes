@@ -61,7 +61,7 @@ final public class JdbcUtil {
    }
 
    static public String createCodeInsertSql( final String vocabulary ) {
-      return createRowInsertSql( vocabulary.toLowerCase().replace( '.', '_' ).replace( '-', '_' ), "CUI", vocabulary );
+      return createRowInsertSql( vocabulary, "CUI", vocabulary );
    }
 
    static public String createRowInsertSql( final String tableName, final String... fieldNames ) {
@@ -69,7 +69,7 @@ final public class JdbcUtil {
       sb.append( " " ).append( tableName );
       sb.append( " (" );
       for ( String fieldName : fieldNames ) {
-         sb.append( fieldName ).append( ',' );
+         sb.append( fieldName.toUpperCase() ).append( ',' );
       }
       // remove last comma
       sb.setLength( sb.length() - 1 );

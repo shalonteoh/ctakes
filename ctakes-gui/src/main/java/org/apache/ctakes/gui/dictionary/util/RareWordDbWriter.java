@@ -42,6 +42,9 @@ final public class RareWordDbWriter {
    }
 
 
+   static private final Function<String, String> fixVocabName
+         = v -> v.toLowerCase().replace( '.', '_' ).replace( '-', '_' );
+
    static public boolean writeConcepts( final Connection connection, final Map<Long, Concept> concepts ) {
       // Get Count of appearance in dictionary per term token
       final Map<String, Long> tokenCounts = RareWordUtil.getTokenCounts( concepts.values() );
@@ -157,7 +160,7 @@ final public class RareWordDbWriter {
 
    static private Map<String, String> createCodeInsertSqls() {
       return VocabularyStore.getInstance().getAllVocabularies().stream()
-            .collect( Collectors.toMap( Function.identity(), JdbcUtil::createCodeInsertSql ) );
+                            .collect( Collectors.toMap( fixVocabName, JdbcUtil::createCodeInsertSql ) );
    }
 
    static private Map<String, PreparedStatement> createCodeStatements( final Connection connection,
@@ -172,7 +175,7 @@ final public class RareWordDbWriter {
 
    static private Map<String, Long> createCodeCounts() {
       return VocabularyStore.getInstance().getAllVocabularies().stream()
-            .collect( Collectors.toMap( Function.identity(), v -> 0L ) );
+                            .collect( Collectors.toMap( fixVocabName, v -> 0L ) );
    }
 
    static private void setCodeAppropriately( final PreparedStatement statement, final String code,

@@ -4,7 +4,7 @@
 //     To use the JdbcNoteTableReader and your own settings,
 //     copy this file, edit to your details, and add two lines to the top of your piper file:
 //          load /my/dir/MyJdbcSettings.piper
-//          reader jdbc.JdbcNote
+//          reader jdbc.JdbcNotesReader
 //
 
 

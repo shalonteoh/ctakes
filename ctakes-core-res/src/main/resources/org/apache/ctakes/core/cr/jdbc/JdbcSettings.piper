@@ -1,7 +1,7 @@
 //
-//     The following are parameters that can be set for use by the JdbcNoteTableReader.
+//     The following are parameters that can be set for use by the JdbcNotesReader.
 //     The settings below are examples and should be changed.
-//     To use the JdbcNoteTableReader and your own settings,
+//     To use the JdbcNotesReader and your own settings,
 //     copy this file, edit to your details, and add two lines to the top of your piper file:
 //          load /my/dir/MyJdbcSettings.piper
 //          reader jdbc.JdbcNotesReader

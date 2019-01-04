@@ -3,6 +3,7 @@ package org.apache.ctakes.core.cr;
 import org.apache.ctakes.core.config.ConfigParameterConstants;
 import org.apache.ctakes.core.note.NoteSpecs;
 import org.apache.ctakes.core.patient.PatientNoteStore;
+import org.apache.ctakes.core.pipeline.ProgressManager;
 import org.apache.ctakes.core.resource.FileLocator;
 import org.apache.ctakes.core.util.NumberedSuffixComparator;
 import org.apache.ctakes.core.util.SourceMetadataUtil;
@@ -269,6 +270,7 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
          _files = getDescendentFiles( _rootDir, _validExtensions, 0 );
          _patientDocCounts.forEach( ( k, v ) -> PatientNoteStore.getInstance().setWantedDocCount( k, v ) );
       }
+      ProgressManager.getInstance().initializeProgress( _rootDirPath, _files.size() );
    }
 
    /**
@@ -440,7 +442,11 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
     */
    @Override
    public boolean hasNext() {
-      return _currentIndex < _files.size();
+      final boolean hasNext = _currentIndex < _files.size();
+      if ( !hasNext ) {
+         ProgressManager.getInstance().updateProgress( _files.size() );
+      }
+      return hasNext;
    }
 
    /**
@@ -449,6 +455,7 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
    @Override
    public void getNext( final JCas jcas ) throws IOException, CollectionException {
       final File file = _files.get( _currentIndex );
+      ProgressManager.getInstance().updateProgress( _currentIndex );
       _currentIndex++;
       final String id = createDocumentID( file, getValidExtensions() );
       LOGGER.info( "Reading " + id + " : " + file.getPath() );

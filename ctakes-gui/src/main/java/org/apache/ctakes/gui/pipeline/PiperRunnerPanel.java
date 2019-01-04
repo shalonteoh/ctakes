@@ -4,6 +4,7 @@ package org.apache.ctakes.gui.pipeline;
 import org.apache.ctakes.core.pipeline.PipeBitLocator;
 import org.apache.ctakes.core.pipeline.PiperFileReader;
 import org.apache.ctakes.core.pipeline.PiperFileRunner;
+import org.apache.ctakes.core.pipeline.ProgressManager;
 import org.apache.ctakes.core.resource.FileLocator;
 import org.apache.ctakes.gui.component.*;
 import org.apache.ctakes.gui.pipeline.bit.parameter.ParameterCellRenderer;
@@ -121,10 +122,23 @@ final public class PiperRunnerPanel extends JPanel {
       _parmButton.addActionListener( new OpenParmAction() );
       _saveButton = addButton( toolBar, "Save Parameter File" );
       _saveButton.addActionListener( new SaveParmAction() );
-      toolBar.add( Box.createHorizontalGlue() );
+//      toolBar.add( Box.createHorizontalGlue() );
+      toolBar.addSeparator( new Dimension( 50, 0 ) );
       _runButton = addButton( toolBar, "Run Current Piper File" );
       _runButton.addActionListener( new RunAction() );
       _runButton.setEnabled( false );
+
+      toolBar.addSeparator( new Dimension( 50, 0 ) );
+      final JProgressBar progressBar = new JProgressBar( ProgressManager.getInstance().getModel() ) {
+         protected void fireStateChanged() {
+            super.fireStateChanged();
+            SwingUtilities.invokeLater( () -> setString( getValue() + " / " + getMaximum() ) );
+         }
+      };
+      progressBar.setStringPainted( true );
+      toolBar.add( progressBar );
+      toolBar.addSeparator( new Dimension( 10, 0 ) );
+
       return toolBar;
    }
 

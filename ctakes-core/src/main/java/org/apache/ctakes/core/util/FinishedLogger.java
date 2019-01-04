@@ -1,6 +1,7 @@
 package org.apache.ctakes.core.util;
 
 import org.apache.ctakes.core.pipeline.PipeBitInfo;
+import org.apache.ctakes.core.pipeline.ProgressManager;
 import org.apache.log4j.Logger;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -43,6 +44,7 @@ final public class FinishedLogger extends JCasAnnotator_ImplBase {
    @Override
    public void process( final JCas jCas ) throws AnalysisEngineProcessException {
       _docCount++;
+      ProgressManager.getInstance().updateProgress( Long.valueOf( _docCount ).intValue() );
    }
 
    public void collectionProcessComplete() throws AnalysisEngineProcessException {

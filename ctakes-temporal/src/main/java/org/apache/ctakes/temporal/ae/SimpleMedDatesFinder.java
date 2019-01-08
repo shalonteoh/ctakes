@@ -350,7 +350,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    }
 
 
-   synchronized protected void loadSections() throws ResourceInitializationException {
+   synchronized private void loadSections() throws ResourceInitializationException {
       if ( _sectionListPath == null ) {
          return;
       }
@@ -358,7 +358,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    }
 
 
-   synchronized protected void loadCuis() throws ResourceInitializationException {
+   synchronized private void loadCuis() throws ResourceInitializationException {
       if ( _cuiListPath == null ) {
          return;
       }
@@ -366,7 +366,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    }
 
 
-   synchronized protected void loadList( final String filePath, final Collection<String> list )
+   synchronized private void loadList( final String filePath, final Collection<String> list )
          throws ResourceInitializationException {
       if ( filePath == null ) {
          return;

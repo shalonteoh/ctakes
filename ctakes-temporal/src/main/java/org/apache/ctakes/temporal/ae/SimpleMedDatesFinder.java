@@ -4,6 +4,7 @@ import org.apache.ctakes.core.pipeline.PipeBitInfo;
 import org.apache.ctakes.core.resource.FileLocator;
 import org.apache.ctakes.core.util.OntologyConceptUtil;
 import org.apache.ctakes.core.util.Pair;
+import org.apache.ctakes.temporal.utils.CalendarUtil;
 import org.apache.ctakes.typesystem.type.refsem.Date;
 import org.apache.ctakes.typesystem.type.textsem.DateAnnotation;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
@@ -27,7 +28,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
 
-import static java.util.Calendar.DAY_OF_MONTH;
+import static org.apache.ctakes.temporal.utils.CalendarUtil.NULL_CALENDAR;
 
 /**
  * @author SPF , chip-nlp
@@ -81,9 +82,6 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    )
    private String _cuiListPath;
 
-
-   static private final Calendar NULL_CALENDAR = new Calendar.Builder().setDate( 1, 1, 1 ).build();
-//   static private final Options PAST_OPTIONS = new Options( Pointer.PointerType.PAST );
 
    private Class<? extends Annotation> _lookupClass;
    private final Collection<String> _sectionList = new ArrayList<>();
@@ -190,14 +188,14 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
             spans.add( span );
             medMap.put( span, (MedicationEventMention)annotation );
          } else if ( annotation instanceof TimeMention ) {
-            final Calendar calendar = getCalendar( (TimeMention)annotation );
+            final Calendar calendar = CalendarUtil.getCalendar( (TimeMention)annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
                final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
                calendarMap.put( span, calendar );
             }
          } else if ( annotation instanceof DateAnnotation ) {
-            final Calendar calendar = getCalendar( (DateAnnotation)annotation );
+            final Calendar calendar = CalendarUtil.getCalendar( (DateAnnotation)annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
                final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
@@ -226,18 +224,12 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
          if ( span.getValue1() > startIndex && span.getValue1() < startIndex + 5 ) {
             final Calendar start = calendarMap.get( span );
             if ( start != null ) {
-               startDate = new Date( jCas );
-               startDate.setDay( "" + start.get( DAY_OF_MONTH ) );
-               startDate.setMonth( "" + (start.get( Calendar.MONTH ) + 1) );
-               startDate.setYear( "" + start.get( Calendar.YEAR ) );
+               startDate = CalendarUtil.createTypeDate( jCas, start );
             }
          } else if ( span.getValue1() > stopIndex && span.getValue1() < stopIndex + 5 ) {
             final Calendar stop = calendarMap.get( span );
             if ( stop != null ) {
-               stopDate = new Date( jCas );
-               stopDate.setDay( "" + stop.get( DAY_OF_MONTH ) );
-               stopDate.setMonth( "" + (stop.get( Calendar.MONTH ) + 1) );
-               stopDate.setYear( "" + stop.get( Calendar.YEAR ) );
+               stopDate = CalendarUtil.createTypeDate( jCas, stop );
             }
          } else {
             final MedicationEventMention med = medMap.get( span );
@@ -288,66 +280,6 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    }
 
 
-   static private Calendar getCalendar( final TimeMention timeMention ) {
-      final org.apache.ctakes.typesystem.type.refsem.Date typeDate = timeMention.getDate();
-      if ( typeDate != null ) {
-         final int year = parseInt( typeDate.getYear() );
-         final int month = parseInt( typeDate.getMonth() );
-         final int day = parseInt( typeDate.getDay() );
-         if ( year == Integer.MIN_VALUE || month == Integer.MIN_VALUE || day == Integer.MIN_VALUE ) {
-            return NULL_CALENDAR;
-         }
-         LOGGER.debug( "TimeMention Date " + year + "" + month + "" + day );
-         return new Calendar.Builder().setDate( year, month - 1, day ).build();
-      }
-      return getCalendar( timeMention.getCoveredText() );
-   }
-
-   static private Calendar getCalendar( final DateAnnotation dateAnnotation ) {
-      return getCalendar( dateAnnotation.getCoveredText() );
-   }
-
-   static private Calendar getCalendar( final String text ) {
-      if ( isLousyDateText( text ) ) {
-         return NULL_CALENDAR;
-      }
-//      final Span span = Chronic.parse( text, PAST_OPTIONS );
-//      if ( span == null ) {
-//         return NULL_CALENDAR;
-//      }
-//      return span.getEndCalendar();
-
-      return NULL_CALENDAR;
-   }
-
-
-   static private boolean isLousyDateText( final String text ) {
-      if ( text.length() < 7 ) {
-         return true;
-      }
-      for ( char c : text.toCharArray() ) {
-         if ( Character.isDigit( c ) ) {
-            return false;
-         }
-      }
-      return true;
-   }
-
-   static private int parseInt( final String text ) {
-      if ( text == null || text.isEmpty() ) {
-         return Integer.MIN_VALUE;
-      }
-      for ( char c : text.toCharArray() ) {
-         if ( !Character.isDigit( c ) ) {
-            return Integer.MIN_VALUE;
-         }
-      }
-      try {
-         return Integer.parseInt( text );
-      } catch ( NumberFormatException nfE ) {
-         return Integer.MIN_VALUE;
-      }
-   }
 
 
    synchronized private void loadSections() throws ResourceInitializationException {

@@ -78,6 +78,11 @@
 			<groupId>org.scala-lang</groupId>
 			<artifactId>scala-library</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.rubiconproject.oss</groupId>
+			<artifactId>jchronic</artifactId>
+			<version>${jchronic.version}</version>
+		</dependency>
 	</dependencies>
 	<!-- The below is all necessary to unpack the UMLS resources since they 
 		can't be used from the classpath -->

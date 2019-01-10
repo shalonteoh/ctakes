@@ -86,7 +86,11 @@ final public class PiperFileRunner {
          try {
             final PrintStream stream = new PrintStream( logPath );
             multE.printStackTrace( stream );
-            LOGGER.info( "For more information please see log file " + logPath );
+            LOGGER.info( "\nFor more information please see log file " + logPath );
+            LOGGER.info( "This is a log file on your machine listing information that may be useful in debugging your failed run." );
+            LOGGER.info(
+                  "Seriously, don't ignore this message.  If you want to get to the root of a problem, check the error log file " +
+                  logPath );
          } catch ( FileNotFoundException fnfE ) {
             LOGGER.warn( "Could not write to log file " + logPath );
             multE.printStackTrace();

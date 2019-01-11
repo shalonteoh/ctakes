@@ -5,6 +5,7 @@ import com.mdimension.jchronic.Chronic;
 import com.mdimension.jchronic.Options;
 import com.mdimension.jchronic.tags.Pointer;
 import com.mdimension.jchronic.utils.Span;
+import org.apache.ctakes.core.util.StringUtil;
 import org.apache.ctakes.typesystem.type.refsem.Date;
 import org.apache.ctakes.typesystem.type.textsem.DateAnnotation;
 import org.apache.ctakes.typesystem.type.textsem.TimeMention;
@@ -12,6 +13,7 @@ import org.apache.uima.jcas.JCas;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import static java.util.Calendar.*;
@@ -123,6 +125,26 @@ final public class CalendarUtil {
          return NULL_CALENDAR;
       }
       return span.getEndCalendar();
+   }
+
+   /**
+    * @param text something with 0-2 month digits, 0-2 day digits and 4 year digits all divided by slash
+    * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
+    */
+   static public Calendar getSlashCalendar( final String text ) {
+      final String[] splits = StringUtil.fastSplit( text, '/' );
+      int month = 1;
+      final int monthI = parseInt( splits[ 0 ] );
+      if ( monthI > 0 ) {
+         month = monthI;
+      }
+      int day = 1;
+      final int dayI = parseInt( splits[ 1 ] );
+      if ( dayI > 0 ) {
+         day = dayI;
+      }
+      final int year = parseInt( splits[ 2 ] );
+      return new GregorianCalendar( year, month - 1, day );
    }
 
    /**

@@ -6,10 +6,8 @@ import org.apache.ctakes.core.util.OntologyConceptUtil;
 import org.apache.ctakes.core.util.Pair;
 import org.apache.ctakes.temporal.utils.CalendarUtil;
 import org.apache.ctakes.typesystem.type.refsem.Date;
-import org.apache.ctakes.typesystem.type.textsem.DateAnnotation;
-import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
-import org.apache.ctakes.typesystem.type.textsem.MedicationEventMention;
-import org.apache.ctakes.typesystem.type.textsem.TimeMention;
+import org.apache.ctakes.typesystem.type.syntax.Chunk;
+import org.apache.ctakes.typesystem.type.textsem.*;
 import org.apache.ctakes.typesystem.type.textspan.Segment;
 import org.apache.log4j.Logger;
 import org.apache.uima.UimaContext;
@@ -27,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static org.apache.ctakes.temporal.utils.CalendarUtil.NULL_CALENDAR;
 
@@ -37,7 +36,7 @@ import static org.apache.ctakes.temporal.utils.CalendarUtil.NULL_CALENDAR;
  */
 @PipeBitInfo(
       name = "SimpleMedDatesFinder",
-      description = "Finds start and stop dates for events.",
+      description = "Finds start and stop dates for medication events.",
       role = PipeBitInfo.Role.ANNOTATOR,
       dependencies = PipeBitInfo.TypeProduct.IDENTIFIED_ANNOTATION,
       products = PipeBitInfo.TypeProduct.TEMPORAL_RELATION
@@ -83,6 +82,8 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    private String _cuiListPath;
 
 
+   static private final Pattern PARTIAL_DATE = Pattern.compile( "[0-9]{0,2}/[0-9]{0,2}/[0-9]{4}" );
+
    private Class<? extends Annotation> _lookupClass;
    private final Collection<String> _sectionList = new ArrayList<>();
    private final Collection<String> _cuiList = new ArrayList<>();
@@ -119,16 +120,16 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
     */
    @Override
    public void process( final JCas jCas ) throws AnalysisEngineProcessException {
-      LOGGER.info( "Finding Simple Event Dates ..." );
+      LOGGER.info( "Finding Medication Dates ..." );
 
-      final Map<Annotation, Collection<IdentifiedAnnotation>> windowAnnotationMap = new HashMap<>();
+      final Map<Annotation, Collection<Annotation>> windowAnnotationMap = new HashMap<>();
       if ( _sectionList.isEmpty() ) {
-         windowAnnotationMap.putAll( JCasUtil.indexCovered( jCas, _lookupClass, IdentifiedAnnotation.class ) );
+         windowAnnotationMap.putAll( JCasUtil.indexCovered( jCas, _lookupClass, Annotation.class ) );
       } else {
          if ( _lookupClass.equals( Segment.class ) ) {
-            final Map<Segment, Collection<IdentifiedAnnotation>> sectionAnnotationMap
-                  = JCasUtil.indexCovered( jCas, Segment.class, IdentifiedAnnotation.class );
-            for ( Map.Entry<Segment, Collection<IdentifiedAnnotation>> sectionAnnotations : sectionAnnotationMap.entrySet() ) {
+            final Map<Segment, Collection<Annotation>> sectionAnnotationMap
+                  = JCasUtil.indexCovered( jCas, Segment.class, Annotation.class );
+            for ( Map.Entry<Segment, Collection<Annotation>> sectionAnnotations : sectionAnnotationMap.entrySet() ) {
                final Segment section = sectionAnnotations.getKey();
                if ( _sectionList.contains( section.getPreferredText() )
                     || _sectionList.contains( section.getId() ) ) {
@@ -142,8 +143,8 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
                final Segment section = sectionWindows.getKey();
                if ( _sectionList.contains( section.getPreferredText() )
                     || _sectionList.contains( section.getId() ) ) {
-                  final Collection<IdentifiedAnnotation> annotations
-                        = JCasUtil.selectCovered( jCas, IdentifiedAnnotation.class, section );
+                  final Collection<Annotation> annotations
+                        = JCasUtil.selectCovered( jCas, Annotation.class, section );
                   windowAnnotationMap.putAll( splitCovered( annotations, sectionWindows.getValue() ) );
                }
             }
@@ -151,7 +152,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
          }
       }
 
-      for ( Map.Entry<Annotation, Collection<IdentifiedAnnotation>> windowAnnotations : windowAnnotationMap.entrySet() ) {
+      for ( Map.Entry<Annotation, Collection<Annotation>> windowAnnotations : windowAnnotationMap.entrySet() ) {
          processWindow( jCas, windowAnnotations.getKey(), windowAnnotations.getValue() );
       }
       LOGGER.info( "Finished." );
@@ -167,7 +168,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
     */
    private void processWindow( final JCas jCas,
                                final Annotation window,
-                               final Collection<IdentifiedAnnotation> annotations ) {
+                               final Collection<Annotation> annotations ) {
       final int offset = window.getBegin();
       final String text = window.getCoveredText().toLowerCase();
       final List<Integer> startSpans = getTextIndices( text, "started" );
@@ -177,16 +178,19 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       }
 
       final List<Pair<Integer>> spans = new ArrayList<>();
-      final Map<Pair<Integer>, MedicationEventMention> medMap = new HashMap<>();
+      final Map<Pair<Integer>, EventMention> medMap = new HashMap<>();
       final Map<Pair<Integer>, Calendar> calendarMap = new HashMap<>();
 
-      for ( IdentifiedAnnotation annotation : annotations ) {
-         if ( annotation instanceof MedicationEventMention
+      for ( Annotation annotation : annotations ) {
+         if ( (annotation instanceof MedicationEventMention || annotation instanceof MedicationMention)
+              && !spans.contains( createTextSpan( annotation, offset ) )
               && (_cuiList.isEmpty()
-                  || OntologyConceptUtil.getCuis( annotation ).stream().anyMatch( _cuiList::contains )) ) {
+                  || OntologyConceptUtil.getCuis( (IdentifiedAnnotation)annotation )
+                                        .stream()
+                                        .anyMatch( _cuiList::contains )) ) {
             final Pair<Integer> span = createTextSpan( annotation, offset );
             spans.add( span );
-            medMap.put( span, (MedicationEventMention)annotation );
+            medMap.put( span, (EventMention)annotation );
          } else if ( annotation instanceof TimeMention ) {
             final Calendar calendar = CalendarUtil.getCalendar( (TimeMention)annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
@@ -194,8 +198,20 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
                spans.add( span );
                calendarMap.put( span, calendar );
             }
-         } else if ( annotation instanceof DateAnnotation ) {
+         } else if ( annotation instanceof DateAnnotation
+                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
             final Calendar calendar = CalendarUtil.getCalendar( (DateAnnotation)annotation );
+            if ( !NULL_CALENDAR.equals( calendar ) ) {
+               final Pair<Integer> span = createTextSpan( annotation, offset );
+               spans.add( span );
+               calendarMap.put( span, calendar );
+            }
+         } else if ( annotation instanceof Chunk
+                     && annotation.getCoveredText().length() >= 6
+                     && annotation.getCoveredText().length() <= 10
+                     && PARTIAL_DATE.matcher( annotation.getCoveredText() ).matches()
+                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
+            final Calendar calendar = CalendarUtil.getSlashCalendar( annotation.getCoveredText() );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
                final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
@@ -209,7 +225,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
 
    static private void processSpans( final JCas jCas,
                                      final List<Pair<Integer>> medDateSpans,
-                                     final Map<Pair<Integer>, MedicationEventMention> medMap,
+                                     final Map<Pair<Integer>, EventMention> medMap,
                                      final Map<Pair<Integer>, Calendar> calendarMap,
                                      final List<Integer> startSpans,
                                      final List<Integer> stopSpans ) {
@@ -218,42 +234,65 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
 
       Date startDate = null;
       Date stopDate = null;
+      TimeMention startMention = null;
+      TimeMention stopMention = null;
 
       for ( int z = medDateSpans.size() - 1; z >= 0; z-- ) {
          final Pair<Integer> span = medDateSpans.get( z );
-         if ( span.getValue1() > startIndex && span.getValue1() < startIndex + 5 ) {
+         int startSpanBegin = startSpans.get( startIndex );
+         int stopSpanBegin = stopSpans.get( stopIndex );
+         if ( span.getValue1() > startSpanBegin && span.getValue1() < startSpanBegin + 15 ) {
             final Calendar start = calendarMap.get( span );
             if ( start != null ) {
                startDate = CalendarUtil.createTypeDate( jCas, start );
+               startMention = new TimeMention( jCas, span.getValue1(), span.getValue2() );
+               startMention.setDate( startDate );
+               startIndex = Math.max( startIndex - 1, 0 );
             }
-         } else if ( span.getValue1() > stopIndex && span.getValue1() < stopIndex + 5 ) {
+         } else if ( span.getValue1() > stopSpanBegin && span.getValue1() < stopSpanBegin + 15 ) {
             final Calendar stop = calendarMap.get( span );
             if ( stop != null ) {
                stopDate = CalendarUtil.createTypeDate( jCas, stop );
+               stopMention = new TimeMention( jCas, span.getValue1(), span.getValue2() );
+               stopMention.setDate( stopDate );
+               stopIndex = Math.max( stopIndex - 1, 0 );
+               startDate = null;
+               startMention = null;
             }
          } else {
-            final MedicationEventMention med = medMap.get( span );
+            final EventMention med = medMap.get( span );
             if ( med == null ) {
                // possibly some interrupting date?  Reset the dates.
                startDate = null;
+               startMention = null;
                stopDate = null;
+               stopMention = null;
                continue;
             }
-            if ( startDate != null ) {
-               med.setStartDate( startDate );
-            }
-            if ( stopDate != null ) {
-               med.setEndDate( stopDate );
+            if ( med instanceof MedicationEventMention ) {
+               if ( startDate != null ) {
+                  ((MedicationEventMention)med).setStartDate( startDate );
+               }
+               if ( stopDate != null ) {
+                  ((MedicationEventMention)med).setEndDate( stopDate );
+               }
+            } else if ( med instanceof MedicationMention ) {
+               if ( startMention != null ) {
+                  ((MedicationMention)med).setStartDate( startMention );
+               }
+               if ( stopMention != null ) {
+                  ((MedicationMention)med).setEndDate( stopMention );
+               }
             }
          }
       }
    }
 
-   static private Map<Annotation, Collection<IdentifiedAnnotation>> splitCovered(
-         final Collection<IdentifiedAnnotation> annotations,
+   static private Map<Annotation, Collection<Annotation>> splitCovered(
+         final Collection<Annotation> annotations,
          final Collection<Annotation> covering ) {
-      final Map<Annotation, Collection<IdentifiedAnnotation>> covered = new HashMap<>();
-      for ( IdentifiedAnnotation annotation : annotations ) {
+      final Map<Annotation, Collection<Annotation>> covered = new HashMap<>();
+      for ( Annotation annotation : annotations ) {
          final int begin = annotation.getBegin();
          for ( Annotation cover : covering ) {
             if ( begin >= cover.getBegin() && begin < cover.getEnd() ) {
@@ -266,11 +305,15 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
 
    static private List<Integer> getTextIndices( final String windowText, final String searchText ) {
       final String text = windowText.toLowerCase();
+      final int maxIndex = text.length() - 1;
       final List<Integer> indices = new ArrayList<>();
       int index = text.indexOf( searchText );
       while ( index >= 0 ) {
          indices.add( index );
-         index = text.indexOf( searchText, index );
+         if ( index == maxIndex ) {
+            break;
+         }
+         index = text.indexOf( searchText, index + 1 );
       }
       return indices;
    }

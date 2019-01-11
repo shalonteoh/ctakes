@@ -32,7 +32,7 @@ final public class StringUtil {
       final String[] tokens = new String[ line.length() / 2 + 1 ];
       int index = 0;
       int lastSplit = -1;
-      while ( nextSplit > 0 ) {
+      while ( nextSplit >= 0 ) {
          tokens[ index ] = line.substring( lastSplit + 1, nextSplit );
          lastSplit = nextSplit;
          nextSplit = line.indexOf( c, lastSplit + 1 );

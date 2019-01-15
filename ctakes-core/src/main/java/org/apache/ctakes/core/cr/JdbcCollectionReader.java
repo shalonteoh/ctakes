@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -217,7 +217,7 @@ public class JdbcCollectionReader extends JCasCollectionReader_ImplBase {
          throws SQLException {
       StringBuffer sb = new StringBuffer();
       sb.append( "SELECT COUNT(*) " );
-      int idx = querySql.indexOf( "FROM" );
+      int idx = querySql.toUpperCase().indexOf( "FROM" );
       sb.append( querySql.subSequence( idx, querySql.length() ) );
       PreparedStatement cntStmt = conn.prepareStatement( sb.toString() );
 

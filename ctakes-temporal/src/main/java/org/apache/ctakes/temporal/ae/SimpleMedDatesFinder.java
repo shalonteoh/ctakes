@@ -82,7 +82,8 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    private String _cuiListPath;
 
 
-   static private final Pattern PARTIAL_DATE = Pattern.compile( "[0-9]{0,2}/[0-9]{0,2}/[0-9]{4}" );
+   static private final Pattern SLASH_DATE = Pattern.compile( "[0-9]{0,2}/[0-9]{0,2}/[0-9]{2,4}" );
+   static private final Pattern DASH_DATE = Pattern.compile( "[0-9]{1,4}-[0-9]{1,2}-[0-9]{1,4}" );
 
    private Class<? extends Annotation> _lookupClass;
    private final Collection<String> _sectionList = new ArrayList<>();
@@ -191,7 +192,10 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
             final Pair<Integer> span = createTextSpan( annotation, offset );
             spans.add( span );
             medMap.put( span, (EventMention)annotation );
-         } else if ( annotation instanceof TimeMention ) {
+         } else if ( annotation instanceof TimeMention
+                     && annotation.getCoveredText().length() >= 8
+                     && annotation.getCoveredText().length() <= 10
+                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
             final Calendar calendar = CalendarUtil.getCalendar( (TimeMention)annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
                final Pair<Integer> span = createTextSpan( annotation, offset );
@@ -199,6 +203,7 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
                calendarMap.put( span, calendar );
             }
          } else if ( annotation instanceof DateAnnotation
+                     && annotation.getCoveredText().length() >= 8
                      && !spans.contains( createTextSpan( annotation, offset ) ) ) {
             final Calendar calendar = CalendarUtil.getCalendar( (DateAnnotation)annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
@@ -209,9 +214,16 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
          } else if ( annotation instanceof Chunk
                      && annotation.getCoveredText().length() >= 6
                      && annotation.getCoveredText().length() <= 10
-                     && PARTIAL_DATE.matcher( annotation.getCoveredText() ).matches()
-                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
-            final Calendar calendar = CalendarUtil.getSlashCalendar( annotation.getCoveredText() );
+                     && (SLASH_DATE.matcher( annotation.getCoveredText() ).matches()
+                         || DASH_DATE.matcher( annotation.getCoveredText() ).matches()) ) {
+            // Chunks are not always reliable.  2005-03-06 is not a chunk ...
+//            LOGGER.warn( "Chunk " + createTextSpan( annotation, offset ) + " " + annotation.getCoveredText() );
+            final Calendar calendar;
+            if ( SLASH_DATE.matcher( annotation.getCoveredText() ).matches() ) {
+               calendar = CalendarUtil.getSlashCalendar( annotation.getCoveredText() );
+            } else {
+               calendar = CalendarUtil.getDashCalendar( annotation.getCoveredText() );
+            }
             if ( !NULL_CALENDAR.equals( calendar ) ) {
                final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
@@ -219,12 +231,16 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
             }
          }
       }
-      processSpans( jCas, spans, medMap, calendarMap, startSpans, stopSpans );
+      startSpans.sort( Integer::compareTo );
+      stopSpans.sort( Integer::compareTo );
+      spans.sort( Comparator.comparingInt( Pair::getValue1 ) );
+      processSpans( jCas, offset, spans, medMap, calendarMap, startSpans, stopSpans );
    }
 
 
    static private void processSpans( final JCas jCas,
-                                     final List<Pair<Integer>> medDateSpans,
+                                     final int offset,
+                                     final List<Pair<Integer>> medOrDateSpans,
                                      final Map<Pair<Integer>, EventMention> medMap,
                                      final Map<Pair<Integer>, Calendar> calendarMap,
                                      final List<Integer> startSpans,
@@ -237,38 +253,12 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       TimeMention startMention = null;
       TimeMention stopMention = null;
 
-      for ( int z = medDateSpans.size() - 1; z >= 0; z-- ) {
-         final Pair<Integer> span = medDateSpans.get( z );
-         int startSpanBegin = startSpans.get( startIndex );
-         int stopSpanBegin = stopSpans.get( stopIndex );
-         if ( span.getValue1() > startSpanBegin && span.getValue1() < startSpanBegin + 15 ) {
-            final Calendar start = calendarMap.get( span );
-            if ( start != null ) {
-               startDate = CalendarUtil.createTypeDate( jCas, start );
-               startMention = new TimeMention( jCas, span.getValue1(), span.getValue2() );
-               startMention.setDate( startDate );
-               startIndex = Math.max( startIndex - 1, 0 );
-            }
-         } else if ( span.getValue1() > stopSpanBegin && span.getValue1() < stopSpanBegin + 15 ) {
-            final Calendar stop = calendarMap.get( span );
-            if ( stop != null ) {
-               stopDate = CalendarUtil.createTypeDate( jCas, stop );
-               stopMention = new TimeMention( jCas, span.getValue1(), span.getValue2() );
-               stopMention.setDate( stopDate );
-               stopIndex = Math.max( stopIndex - 1, 0 );
-               startDate = null;
-               startMention = null;
-            }
-         } else {
-            final EventMention med = medMap.get( span );
-            if ( med == null ) {
-               // possibly some interrupting date?  Reset the dates.
-               startDate = null;
-               startMention = null;
-               stopDate = null;
-               stopMention = null;
-               continue;
-            }
+      for ( int z = medOrDateSpans.size() - 1; z >= 0; z-- ) {
+         final Pair<Integer> medOrDateSpan = medOrDateSpans.get( z );
+         final int startSpanBegin = startIndex >= 0 ? startSpans.get( startIndex ) : Integer.MAX_VALUE;
+         final int stopSpanBegin = stopIndex >= 0 ? stopSpans.get( stopIndex ) : Integer.MAX_VALUE;
+         final EventMention med = medMap.get( medOrDateSpan );
+         if ( med != null ) {
             if ( med instanceof MedicationEventMention ) {
                if ( startDate != null ) {
                   ((MedicationEventMention)med).setStartDate( startDate );
@@ -283,6 +273,25 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
                if ( stopMention != null ) {
                   ((MedicationMention)med).setEndDate( stopMention );
                }
+            }
+         } else {
+            final Calendar calendar = calendarMap.get( medOrDateSpan );
+            if ( calendar == null ) {
+            } else if ( medOrDateSpan.getValue1() > startSpanBegin &&
+                        medOrDateSpan.getValue1() < startSpanBegin + 15 ) {
+               startDate = CalendarUtil.createTypeDate( jCas, calendar );
+               startMention = new TimeMention( jCas,
+                     offset + medOrDateSpan.getValue1(), offset + medOrDateSpan.getValue2() );
+               startMention.setDate( startDate );
+               startIndex--;
+            } else if ( medOrDateSpan.getValue1() > stopSpanBegin && medOrDateSpan.getValue1() < stopSpanBegin + 15 ) {
+               stopDate = CalendarUtil.createTypeDate( jCas, calendar );
+               stopMention = new TimeMention( jCas,
+                     offset + medOrDateSpan.getValue1(), offset + medOrDateSpan.getValue2() );
+               stopMention.setDate( stopDate );
+               stopIndex--;
+               startDate = null;
+               startMention = null;
             }
          }
       }

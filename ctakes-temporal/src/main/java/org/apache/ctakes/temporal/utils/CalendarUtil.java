@@ -128,7 +128,7 @@ final public class CalendarUtil {
    }
 
    /**
-    * @param text something with 0-2 month digits, 0-2 day digits and 4 year digits all divided by slash
+    * @param text something with 0-2 month digits, 0-2 day digits and 2-4 year digits all divided by slash
     * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
     */
    static public Calendar getSlashCalendar( final String text ) {
@@ -144,7 +144,36 @@ final public class CalendarUtil {
          day = dayI;
       }
       final int year = parseInt( splits[ 2 ] );
-      return new GregorianCalendar( year, month - 1, day );
+      return createCalendar( month, day, year );
+   }
+
+   /**
+    * @param text something with 1-2 month digits, 1-2 day digits and 4 year digits all divided by dash
+    * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
+    */
+   static public Calendar getDashCalendar( final String text ) {
+      final String[] splits = StringUtil.fastSplit( text, '-' );
+      final int month = parseInt( splits[ 0 ] );
+      int day = parseInt( splits[ 1 ] );
+      final int year = parseInt( splits[ 2 ] );
+      if ( splits[ 0 ].length() == 4 ) {
+         // year and month are reversed
+         return createCalendar( year, day, month );
+      }
+      return createCalendar( month, day, year );
+   }
+
+   static private Calendar createCalendar( final int month, final int day, final int year ) {
+      int y2kYear = year;
+      if ( year < 100 ) {
+         // silly kludge for 2 digit years
+         if ( year < 30 ) {
+            y2kYear += 2000;
+         } else {
+            y2kYear += 1900;
+         }
+      }
+      return new GregorianCalendar( y2kYear, month - 1, day );
    }
 
    /**

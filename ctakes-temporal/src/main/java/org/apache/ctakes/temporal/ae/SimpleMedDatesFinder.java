@@ -25,7 +25,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static org.apache.ctakes.temporal.utils.CalendarUtil.NULL_CALENDAR;
 
@@ -81,9 +80,6 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
    )
    private String _cuiListPath;
 
-
-   static private final Pattern SLASH_DATE = Pattern.compile( "[0-9]{0,2}/[0-9]{0,2}/[0-9]{2,4}" );
-   static private final Pattern DASH_DATE = Pattern.compile( "[0-9]{1,4}-[0-9]{1,2}-[0-9]{1,4}" );
 
    private Class<? extends Annotation> _lookupClass;
    private final Collection<String> _sectionList = new ArrayList<>();
@@ -183,49 +179,25 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       final Map<Pair<Integer>, Calendar> calendarMap = new HashMap<>();
 
       for ( Annotation annotation : annotations ) {
+         final Pair<Integer> span = createInWindowSpan( annotation, offset );
          if ( (annotation instanceof MedicationEventMention || annotation instanceof MedicationMention)
-              && !spans.contains( createTextSpan( annotation, offset ) )
+              && !spans.contains( createInWindowSpan( annotation, offset ) )
               && (_cuiList.isEmpty()
                   || OntologyConceptUtil.getCuis( (IdentifiedAnnotation)annotation )
                                         .stream()
                                         .anyMatch( _cuiList::contains )) ) {
-            final Pair<Integer> span = createTextSpan( annotation, offset );
             spans.add( span );
             medMap.put( span, (EventMention)annotation );
-         } else if ( annotation instanceof TimeMention
-                     && annotation.getCoveredText().length() >= 8
-                     && annotation.getCoveredText().length() <= 10
-                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
-            final Calendar calendar = CalendarUtil.getCalendar( (TimeMention)annotation );
+         } else if ( (annotation instanceof DateAnnotation || annotation instanceof TimeMention)
+                     && !spans.contains( span ) ) {
+            final Calendar calendar = CalendarUtil.createTimexCalendar( annotation );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
-               final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
                calendarMap.put( span, calendar );
             }
-         } else if ( annotation instanceof DateAnnotation
-                     && annotation.getCoveredText().length() >= 8
-                     && !spans.contains( createTextSpan( annotation, offset ) ) ) {
-            final Calendar calendar = CalendarUtil.getCalendar( (DateAnnotation)annotation );
+         } else if ( annotation instanceof Chunk ) {
+            final Calendar calendar = CalendarUtil.getTextCalendar( annotation.getCoveredText() );
             if ( !NULL_CALENDAR.equals( calendar ) ) {
-               final Pair<Integer> span = createTextSpan( annotation, offset );
-               spans.add( span );
-               calendarMap.put( span, calendar );
-            }
-         } else if ( annotation instanceof Chunk
-                     && annotation.getCoveredText().length() >= 6
-                     && annotation.getCoveredText().length() <= 10
-                     && (SLASH_DATE.matcher( annotation.getCoveredText() ).matches()
-                         || DASH_DATE.matcher( annotation.getCoveredText() ).matches()) ) {
-            // Chunks are not always reliable.  2005-03-06 is not a chunk ...
-//            LOGGER.warn( "Chunk " + createTextSpan( annotation, offset ) + " " + annotation.getCoveredText() );
-            final Calendar calendar;
-            if ( SLASH_DATE.matcher( annotation.getCoveredText() ).matches() ) {
-               calendar = CalendarUtil.getSlashCalendar( annotation.getCoveredText() );
-            } else {
-               calendar = CalendarUtil.getDashCalendar( annotation.getCoveredText() );
-            }
-            if ( !NULL_CALENDAR.equals( calendar ) ) {
-               final Pair<Integer> span = createTextSpan( annotation, offset );
                spans.add( span );
                calendarMap.put( span, calendar );
             }
@@ -234,10 +206,22 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       startSpans.sort( Integer::compareTo );
       stopSpans.sort( Integer::compareTo );
       spans.sort( Comparator.comparingInt( Pair::getValue1 ) );
+      cleanSpans( spans, calendarMap );
+
       processSpans( jCas, offset, spans, medMap, calendarMap, startSpans, stopSpans );
    }
 
-
+   /**
+    * Once spans and their contained information have been pulled out of a window, create start and stop TimeMentions
+    *
+    * @param jCas           ye olde ...
+    * @param offset         the offset of the window beginning in the document
+    * @param medOrDateSpans list of both medication and calendar spans
+    * @param medMap         span and medication
+    * @param calendarMap    span and calendar
+    * @param startSpans     spans with text "started"
+    * @param stopSpans      spans with text "stopped"
+    */
    static private void processSpans( final JCas jCas,
                                      final int offset,
                                      final List<Pair<Integer>> medOrDateSpans,
@@ -276,9 +260,8 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
             }
          } else {
             final Calendar calendar = calendarMap.get( medOrDateSpan );
-            if ( calendar == null ) {
-            } else if ( medOrDateSpan.getValue1() > startSpanBegin &&
-                        medOrDateSpan.getValue1() < startSpanBegin + 15 ) {
+            if ( medOrDateSpan.getValue1() > startSpanBegin &&
+                 medOrDateSpan.getValue1() < startSpanBegin + 15 ) {
                startDate = CalendarUtil.createTypeDate( jCas, calendar );
                startMention = new TimeMention( jCas,
                      offset + medOrDateSpan.getValue1(), offset + medOrDateSpan.getValue2() );
@@ -297,6 +280,12 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       }
    }
 
+   /**
+    *  For faster processing of windows, instead of calling JCasUtil.indexCovered(..), do it with known possibilities
+    * @param annotations possibly covered
+    * @param covering covering annotations
+    * @return -
+    */
    static private Map<Annotation, Collection<Annotation>> splitCovered(
          final Collection<Annotation> annotations,
          final Collection<Annotation> covering ) {
@@ -312,6 +301,12 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       return covered;
    }
 
+   /**
+    *
+    * @param windowText text with in a window to be searched
+    * @param searchText text wanted
+    * @return collection of begin indices, one for each discovered text in the window
+    */
    static private List<Integer> getTextIndices( final String windowText, final String searchText ) {
       final String text = windowText.toLowerCase();
       final int maxIndex = text.length() - 1;
@@ -327,13 +322,51 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       return indices;
    }
 
-   static private Pair<Integer> createTextSpan( final Annotation annotation, final int offset ) {
+   /**
+    * @param annotation within a window
+    * @param offset     the offset of the window beginning in the document
+    * @return a Pair with begin end values equal to those of the annotation minus the window offset
+    */
+   static private Pair<Integer> createInWindowSpan( final Annotation annotation, final int offset ) {
       return new Pair<>( annotation.getBegin() - offset, annotation.getEnd() - offset );
    }
 
+   /**
+    * Sometimes TimeMentions and/or Chunks overlap and create incomplete dates.
+    * For instance, chunk "7-1-2002", TimeMention "7-1".
+    *
+    * @param spans       contains both calendar and medication spans
+    * @param calendarMap -
+    */
+   static private void cleanSpans( final List<Pair<Integer>> spans, final Map<Pair<Integer>, Calendar> calendarMap ) {
+      final Collection<Pair<Integer>> removalSpans = new ArrayList<>();
+      for ( int i = 0; i < spans.size() - 1; i++ ) {
+         final Pair<Integer> iSpan = spans.get( i );
+         if ( !calendarMap.keySet().contains( iSpan ) ) {
+            continue;
+         }
+         for ( int j = i + 1; j < spans.size(); j++ ) {
+            final Pair<Integer> jSpan = spans.get( j );
+            if ( !calendarMap.keySet().contains( jSpan ) ) {
+               continue;
+            }
+            if ( (iSpan.getValue1() <= jSpan.getValue1() && jSpan.getValue2() < iSpan.getValue2())
+                 || (iSpan.getValue1() < jSpan.getValue1() && jSpan.getValue2() <= iSpan.getValue2()) ) {
+               removalSpans.add( jSpan );
+            } else if ( (jSpan.getValue1() <= iSpan.getValue1() && iSpan.getValue2() < jSpan.getValue2())
+                        || (jSpan.getValue1() < iSpan.getValue1() && iSpan.getValue2() <= jSpan.getValue2()) ) {
+               removalSpans.add( iSpan );
+            }
+         }
+      }
+      spans.removeAll( removalSpans );
+      calendarMap.keySet().removeAll( removalSpans );
+   }
 
-
-
+   /**
+    * If a custom medication section list was specified, load it
+    * @throws ResourceInitializationException -
+    */
    synchronized private void loadSections() throws ResourceInitializationException {
       if ( _sectionListPath == null ) {
          return;
@@ -341,7 +374,10 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       loadList( _sectionListPath, _sectionList );
    }
 
-
+   /**
+    * If a custom medication cui list was specified, load it
+    * @throws ResourceInitializationException -
+    */
    synchronized private void loadCuis() throws ResourceInitializationException {
       if ( _cuiListPath == null ) {
          return;
@@ -349,7 +385,12 @@ final public class SimpleMedDatesFinder extends JCasAnnotator_ImplBase {
       loadList( _cuiListPath, _cuiList );
    }
 
-
+   /**
+    * Generic load method
+    * @param filePath -
+    * @param list -
+    * @throws ResourceInitializationException -
+    */
    synchronized private void loadList( final String filePath, final Collection<String> list )
          throws ResourceInitializationException {
       if ( filePath == null ) {

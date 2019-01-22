@@ -10,11 +10,13 @@ import org.apache.ctakes.typesystem.type.refsem.Date;
 import org.apache.ctakes.typesystem.type.textsem.DateAnnotation;
 import org.apache.ctakes.typesystem.type.textsem.TimeMention;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.tcas.Annotation;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static java.util.Calendar.*;
 
@@ -32,6 +34,25 @@ final public class CalendarUtil {
    static public final Calendar NULL_CALENDAR = new Calendar.Builder().setDate( 1, 1, 1 ).build();
    static private final Options PAST_OPTIONS = new Options( Pointer.PointerType.PAST );
 
+   static private final Pattern SLASH_DATE = Pattern.compile( "[0-9]{0,2}/[0-9]{0,2}/[0-9]{2,4}" );
+   static private final Pattern DASH_DATE = Pattern.compile( "[0-9]{1,4}-[0-9]{1,2}-[0-9]{1,4}" );
+   static private final Pattern HALF_SLASH_DATE = Pattern.compile( "(?:1?[0-9]/)?[1-2][0,9][0-9]{2}" );
+
+
+   static public Calendar createTimexCalendar( final Annotation annotation ) {
+      if ( annotation instanceof TimeMention ) {
+         final Date typeDate = ((TimeMention)annotation).getDate();
+         final Calendar typeCalendar = CalendarUtil.getCalendar( typeDate );
+         if ( !NULL_CALENDAR.equals( typeCalendar ) ) {
+            return typeCalendar;
+         }
+      }
+      final Calendar calendar = getTextCalendar( annotation.getCoveredText() );
+      if ( !NULL_CALENDAR.equals( calendar ) ) {
+         return calendar;
+      }
+      return getCalendar( annotation.getCoveredText() );
+   }
 
    /**
     * @param timeMention -
@@ -127,6 +148,20 @@ final public class CalendarUtil {
       return span.getEndCalendar();
    }
 
+   static public Calendar getTextCalendar( final String text ) {
+      if ( text.length() < 4 || text.length() > 10 ) {
+         return NULL_CALENDAR;
+      }
+      if ( SLASH_DATE.matcher( text ).matches() ) {
+         return CalendarUtil.getSlashCalendar( text );
+      } else if ( HALF_SLASH_DATE.matcher( text ).matches() ) {
+         return CalendarUtil.getHalfSlashCalendar( text );
+      } else if ( DASH_DATE.matcher( text ).matches() ) {
+         return CalendarUtil.getDashCalendar( text );
+      }
+      return NULL_CALENDAR;
+   }
+
    /**
     * @param text something with 0-2 month digits, 0-2 day digits and 2-4 year digits all divided by slash
     * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
@@ -148,19 +183,38 @@ final public class CalendarUtil {
    }
 
    /**
+    * @param text something with 4 year digits, possibly preceded by 1-2 month digits and a slash
+    * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
+    */
+   static public Calendar getHalfSlashCalendar( final String text ) {
+      final String[] splits = StringUtil.fastSplit( text, '/' );
+      if ( splits.length == 1 ) {
+         final int year = parseInt( splits[ 0 ] );
+         return createCalendar( 1, 1, year );
+      }
+      int month = 1;
+      final int monthI = parseInt( splits[ 0 ] );
+      if ( monthI > 0 ) {
+         month = monthI;
+      }
+      final int year = parseInt( splits[ 1 ] );
+      return createCalendar( month, 1, year );
+   }
+
+   /**
     * @param text something with 1-2 month digits, 1-2 day digits and 4 year digits all divided by dash
     * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
     */
    static public Calendar getDashCalendar( final String text ) {
       final String[] splits = StringUtil.fastSplit( text, '-' );
-      final int month = parseInt( splits[ 0 ] );
-      int day = parseInt( splits[ 1 ] );
-      final int year = parseInt( splits[ 2 ] );
+      final int monthOrYear = parseInt( splits[ 0 ] );
+      int dayOrMonth = parseInt( splits[ 1 ] );
+      final int yearOrDay = parseInt( splits[ 2 ] );
       if ( splits[ 0 ].length() == 4 ) {
          // year and month are reversed
-         return createCalendar( year, day, month );
+         return createCalendar( dayOrMonth, yearOrDay, monthOrYear );
       }
-      return createCalendar( month, day, year );
+      return createCalendar( monthOrYear, dayOrMonth, yearOrDay );
    }
 
    static private Calendar createCalendar( final int month, final int day, final int year ) {

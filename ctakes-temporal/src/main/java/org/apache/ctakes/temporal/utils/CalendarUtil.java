@@ -9,6 +9,7 @@ import org.apache.ctakes.core.util.StringUtil;
 import org.apache.ctakes.typesystem.type.refsem.Date;
 import org.apache.ctakes.typesystem.type.textsem.DateAnnotation;
 import org.apache.ctakes.typesystem.type.textsem.TimeMention;
+import org.apache.log4j.Logger;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
 
@@ -141,11 +142,16 @@ final public class CalendarUtil {
     * @return Calendar parsed from text, or {@link #NULL_CALENDAR}.
     */
    static public Calendar getCalendar( final String text ) {
-      final Span span = Chronic.parse( text, PAST_OPTIONS );
-      if ( span == null ) {
+      try {
+         final Span span = Chronic.parse( text, PAST_OPTIONS );
+         if ( span == null ) {
+            return NULL_CALENDAR;
+         }
+         return span.getEndCalendar();
+      } catch ( RuntimeException rtE ) {
+         Logger.getLogger( "CalendarUtil" ).error( rtE.getMessage() );
          return NULL_CALENDAR;
       }
-      return span.getEndCalendar();
    }
 
    static public Calendar getTextCalendar( final String text ) {

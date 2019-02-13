@@ -66,8 +66,13 @@ public interface FhirPractitioner {
       } catch ( UnknownHostException uhE ) {
          hostname = "UnknownHost";
       }
+      final String userName = System.getProperty( "user.name" );
       practitioner.setId(
-            getFamilyName() + DIVIDER_CHAR + getName() + DIVIDER_CHAR + getVersion() + DIVIDER_CHAR + hostname );
+            getFamilyName() + DIVIDER_CHAR
+            + getName() + DIVIDER_CHAR
+            + getVersion() + DIVIDER_CHAR
+            + hostname + DIVIDER_CHAR
+            + userName );
       practitioner.setActive( true );
       practitioner.addName( name );
       practitioner.addTelecom( contact );

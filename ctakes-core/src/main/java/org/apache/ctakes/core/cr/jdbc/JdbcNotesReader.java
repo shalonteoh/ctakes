@@ -142,7 +142,7 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
 
    static public final String PARAM_PATIENT_ID = "PatientIdColumn";
    @ConfigurationParameter(
-         name = PARAM_DOCID_DELIMITER,
+         name = PARAM_PATIENT_ID,
          description = "Name of column that contains the patient id.",
          mandatory = false
    )

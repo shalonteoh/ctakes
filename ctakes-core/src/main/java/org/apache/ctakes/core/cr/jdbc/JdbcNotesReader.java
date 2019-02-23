@@ -317,6 +317,7 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
    @Override
    public void initialize( final UimaContext context ) throws ResourceInitializationException {
       super.initialize( context );
+      LOGGER.info( "Using Sql Statement:\n" + _sqlStatement );
       _connection = createConnection( _dbDriver, _url, _user, _pass, _keepAlive );
       _decryptor = createDecryptor( _dbDecryptor );
       _preparedStatement = createSqlStatement( _connection );

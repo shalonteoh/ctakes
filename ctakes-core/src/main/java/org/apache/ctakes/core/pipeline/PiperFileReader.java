@@ -55,11 +55,12 @@ final public class PiperFileReader {
 
    static private final Pattern SPACE_PATTERN = Pattern.compile( "\\s+" );
    static private final Pattern KEY_VALUE_PATTERN = Pattern.compile( "=" );
+   static private final Pattern KEY_VALUE_PATTERN_2 = Pattern.compile( "[^\"=]+|(?:\"[^\"]*\")" );
    static private final Pattern COMMA_ARRAY_PATTERN = Pattern.compile( "," );
    static private final Pattern QUOTE_PATTERN = Pattern.compile( "\"" );
-   static private final Pattern QUOTE_VALUE_PATTERN = Pattern.compile( "(?:[^\"=\\s]+)|(?:\"[^\"=\\r\\n]+\")" );
+   static private final Pattern QUOTE_VALUE_PATTERN = Pattern.compile( "(?:[^\"=\\s]+)|(?:\"[^\"\\r\\n]+\")" );
    static private final Pattern NAME_VALUE_PATTERN = Pattern
-         .compile( "[^\"\\s=]+=(?:(?:[^\"=\\s]+)|(?:\"[^\"=\\r\\n]+\"))" );
+         .compile( "[^\"=\\s]+=(?:(?:[^\"=\\s]+)|(?:\"[^\"\\r\\n]+\"))" );
    static private final Pattern VIEWS_PATTERN = Pattern.compile( AE_VIEW_NAMES + "=[^\\s]+" );
 
    private PipelineBuilder _builder;
@@ -367,7 +368,13 @@ final public class PiperFileReader {
       final Object[] keysAndValues = new Object[ pairs.length * 2 ];
       int i = 0;
       for ( String pair : pairs ) {
-         final String[] keyAndValue = KEY_VALUE_PATTERN.split( pair );
+//         final String[] keyAndValue = KEY_VALUE_PATTERN.split( pair );
+         final Matcher kv_matcher = KEY_VALUE_PATTERN_2.matcher( pair );
+         final List<String> kvList = new ArrayList<>();
+         while ( kv_matcher.find() ) {
+            kvList.add( pair.substring( kv_matcher.start(), kv_matcher.end() ) );
+         }
+         final String[] keyAndValue = kvList.toArray( new String[ kvList.size() ] );
          keysAndValues[ i ] = keyAndValue[ 0 ];
          if ( keyAndValue.length == 1 ) {
             keysAndValues[ i + 1 ] = "";
@@ -403,7 +410,13 @@ final public class PiperFileReader {
       final Object[] keysAndValues = new Object[ pairs.length * 2 ];
       int i = 0;
       for ( String pair : pairs ) {
-         final String[] keyAndValue = KEY_VALUE_PATTERN.split( pair );
+//         final String[] keyAndValue = KEY_VALUE_PATTERN.split( pair );
+         final Matcher kv_matcher = KEY_VALUE_PATTERN_2.matcher( pair );
+         final List<String> kvList = new ArrayList<>();
+         while ( kv_matcher.find() ) {
+            kvList.add( pair.substring( kv_matcher.start(), kv_matcher.end() ) );
+         }
+         final String[] keyAndValue = kvList.toArray( new String[ kvList.size() ] );
          keysAndValues[ i ] = keyAndValue[ 0 ];
          if ( keyAndValue.length == 1 ) {
             keysAndValues[ i + 1 ] = "";

@@ -70,14 +70,19 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
       row.initializeCorpus( corpusInitializer );
       row.initializePatient( value );
       row.initializeDocument( value );
+      boolean batchWritten = false;
       final Collection<IdentifiedAnnotation> annotations = JCasUtil.select( value, IdentifiedAnnotation.class );
       for ( IdentifiedAnnotation annotation : annotations ) {
          row.initializeEntity( annotation );
          final Collection<UmlsConcept> umlsConcepts = OntologyConceptUtil.getUmlsConcepts( annotation );
          for ( UmlsConcept concept : umlsConcepts ) {
             row.addToStatement( statement, concept );
-            incrementBatchIndex();
+            batchWritten = incrementBatchIndex();
          }
+      }
+      if ( !batchWritten ) {
+         // The current batch has not been written to db.  Do so now.
+         getCallableStatement().executeBatch();
       }
    }
 

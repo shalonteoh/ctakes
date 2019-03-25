@@ -32,8 +32,9 @@ final public class ObservationFactTable extends AbstractUmlsTable<CorpusSettings
 
    public ObservationFactTable( final Connection connection,
                                 final String tableName,
+                                final boolean repeatCuis,
                                 final CorpusSettings corpusSettings ) throws SQLException {
-      super( connection, tableName );
+      super( connection, tableName, repeatCuis );
       _corpusSettings = corpusSettings;
    }
 

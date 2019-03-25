@@ -29,9 +29,10 @@ public class I2b2Db extends AbstractJdbcDb {
     * @return observation fact table with only negation marked by a negative (-) sign before concept codes.
     * @throws SQLException -
     */
-   protected ObservationFactTable addObservationFact( final String tableName ) throws SQLException {
+   protected ObservationFactTable addObservationFact( final String tableName, final boolean repeatCuis )
+         throws SQLException {
       final CorpusSettings settings = new CorpusSettings( CorpusSettings.Marker.MARK_NEGATED );
-      return addObservationFact( tableName, settings );
+      return addObservationFact( tableName, repeatCuis, settings );
    }
 
    /**
@@ -41,8 +42,10 @@ public class I2b2Db extends AbstractJdbcDb {
     * @throws SQLException -
     */
    protected ObservationFactTable addObservationFact( final String tableName,
+                                                      final boolean repeatCuis,
                                                       final CorpusSettings corpusSettings ) throws SQLException {
-      final ObservationFactTable table = new ObservationFactTable( getConnection(), tableName, corpusSettings );
+      final ObservationFactTable table
+            = new ObservationFactTable( getConnection(), tableName, repeatCuis, corpusSettings );
       addTable( table );
       return table;
    }

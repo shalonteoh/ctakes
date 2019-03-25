@@ -34,6 +34,14 @@ public class I2b2JdbcWriter extends AbstractJCasJdbcWriter {
    )
    private String _tableName;
 
+   static public final String PARAM_REPEAT_CUIS = "RepeatCuis";
+   @ConfigurationParameter(
+         name = PARAM_REPEAT_CUIS,
+         description = "Repeat Concepts with the same Cui but possibly different Semantic Type or Preferred Text.",
+         mandatory = false
+   )
+   private boolean _repeatCuis;
+
    /**
     * {@inheritDoc}
     */
@@ -51,7 +59,7 @@ public class I2b2JdbcWriter extends AbstractJCasJdbcWriter {
       LOGGER.info( "Initializing connection to " + url + " ..." );
       final I2b2Db db = new I2b2Db( driver, url, user, pass, keepAlive );
       try {
-         db.addObservationFact( _tableName );
+         db.addObservationFact( _tableName, _repeatCuis );
       } catch ( SQLException sqlE ) {
          throw new ResourceInitializationException( sqlE );
       }

@@ -65,7 +65,7 @@ abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
     */
    protected boolean incrementBatchIndex() throws SQLException {
       _batchIndex++;
-      if ( _batchIndex >= DEFAULT_BATCH_LIMIT ) {
+      if ( _batchIndex >= _batchLimit ) {
          _batchIndex = 0;
          getCallableStatement().executeBatch();
          return true;

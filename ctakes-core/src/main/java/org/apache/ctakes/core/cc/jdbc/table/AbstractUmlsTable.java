@@ -5,7 +5,6 @@ import org.apache.ctakes.core.cc.jdbc.row.JdbcRow;
 import org.apache.ctakes.core.util.OntologyConceptUtil;
 import org.apache.ctakes.typesystem.type.refsem.UmlsConcept;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
-import org.apache.log4j.Logger;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 
@@ -13,8 +12,8 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * Table that has one row per UmlsConcept in the JCas.
@@ -26,9 +25,12 @@ import java.util.Collection;
 abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
 
    private JdbcRow<C, JCas, JCas, IdentifiedAnnotation, UmlsConcept> _jdbcRow;
+   private final boolean _repeatCuis;
 
-   public AbstractUmlsTable( final Connection connection, final String tableName ) throws SQLException {
+   public AbstractUmlsTable( final Connection connection, final String tableName, final boolean repeatCuis )
+         throws SQLException {
       super( connection, tableName );
+      _repeatCuis = repeatCuis;
    }
 
    /**
@@ -75,12 +77,20 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
       row.initializeDocument( value );
       boolean batchWritten = false;
       final Collection<IdentifiedAnnotation> annotations = JCasUtil.select( value, IdentifiedAnnotation.class );
-      Logger.getLogger( "AbstractUmlsTable" ).info( annotations.size() + " annotations to be written" );
       for ( IdentifiedAnnotation annotation : annotations ) {
          row.initializeEntity( annotation );
          final Collection<UmlsConcept> umlsConcepts = OntologyConceptUtil.getUmlsConcepts( annotation );
-         Logger.getLogger( "AbstractUmlsTable" )
-               .info( "   " + annotation.getCoveredText() + " " + umlsConcepts.size() + " concepts" );
+         if ( !_repeatCuis && umlsConcepts.size() > 1 ) {
+            final Collection<UmlsConcept> removals = new ArrayList<>();
+            final Collection<String> cuis = new HashSet<>();
+            for ( UmlsConcept concept : umlsConcepts ) {
+               if ( cuis.contains( concept.getCui() ) ) {
+                  removals.add( concept );
+               }
+               cuis.add( concept.getCui() );
+            }
+            umlsConcepts.removeAll( removals );
+         }
          for ( UmlsConcept concept : umlsConcepts ) {
             row.addToStatement( statement, concept );
             batchWritten = incrementBatchIndex();
@@ -88,10 +98,7 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
       }
       if ( !batchWritten ) {
          // The current batch has not been written to db.  Do so now.
-         final int[] updateToLog = getCallableStatement().executeBatch();
-         final Collection<String> u2l = new ArrayList<>();
-         Arrays.stream( updateToLog ).forEach( i -> u2l.add( i + "" ) );
-         Logger.getLogger( "AbstractUmlsTable" ).info( String.join( ",", u2l ) );
+         getCallableStatement().executeBatch();
       }
    }
 

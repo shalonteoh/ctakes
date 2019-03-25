@@ -17,6 +17,7 @@ import org.apache.uima.resource.ResourceProcessException;
 import java.sql.CallableStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -173,7 +174,6 @@ final public class ObservationFactRow
       _valtypeCd.addToStatement( statement, getValtypeCd( value ) );
       _tvalChar.addToStatement( statement, getTvalChar( value ) );
       _observationBlob.addToStatement( statement, getObservationBlob( value ) );
-
       _instance++;
    }
 
@@ -183,7 +183,7 @@ final public class ObservationFactRow
    private void setEmptyDocInfo() {
       _encounter = -1;
       _provider = "";
-      _start = Timestamp.valueOf( "" );
+      _start = Timestamp.valueOf( LocalDateTime.now() );
    }
 
    private String getConceptCode( final UmlsConcept concept ) {

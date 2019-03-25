@@ -31,7 +31,8 @@ public interface JdbcDb {
    default <T> Collection<JdbcTable<T>> getTables( final Class<T> dataClass ) {
       final Collection<JdbcTable<T>> tables = new ArrayList<>();
       for ( JdbcTable<?> table : getTables() ) {
-         if ( dataClass.isAssignableFrom( table.getDataType() ) ) {
+         final Class<?> dataType = table.getDataType();
+         if ( dataType != null && dataType.isAssignableFrom( dataClass ) ) {
             tables.add( (JdbcTable<T>)table );
          }
       }

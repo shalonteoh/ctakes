@@ -662,11 +662,11 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
       if ( revision != null ) {
          sourcedata.setSourceRevisionNbr( revision );
       }
-      final Date revisionDate = getResultDate( _sourceRevisionDate );
+      final Timestamp revisionDate = getResultDate( _sourceRevisionDate );
       if ( revisionDate != null ) {
          sourcedata.setSourceRevisionDate( revisionDate.toString() );
       }
-      final Date originalDate = getResultDate( _sourceOriginalDate );
+      final Timestamp originalDate = getResultDate( _sourceOriginalDate );
       if ( originalDate != null ) {
          sourcedata.setSourceOriginalDate( originalDate.toString() );
       }
@@ -682,11 +682,11 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
     */
    private Demographics createDemographics( final JCas jCas ) throws SQLException {
       final Demographics demographics = new Demographics( jCas );
-      final Date birthDate = getResultDate( _birthDate );
+      final Timestamp birthDate = getResultDate( _birthDate );
       if ( birthDate != null ) {
          demographics.setBirthDate( birthDate.toString() );
       }
-      final Date deathDate = getResultDate( _deathDate );
+      final Timestamp deathDate = getResultDate( _deathDate );
       if ( deathDate != null ) {
          demographics.setDeathDate( deathDate.toString() );
       }
@@ -737,14 +737,14 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
 
    /**
     * @param column column name
-    * @return date in column or null if column name is actually not specified
+    * @return date and time in column or null if column name is actually not specified
     * @throws SQLException -
     */
-   private Date getResultDate( final String column ) throws SQLException {
+   private Timestamp getResultDate( final String column ) throws SQLException {
       if ( column == null || column.isEmpty() ) {
          return null;
       }
-      return _resultSet.getDate( column );
+      return _resultSet.getTimestamp( column );
    }
 
    /**

@@ -417,11 +417,11 @@ final public class JdbcNotesReader extends JCasCollectionReader_ImplBase {
       LOGGER.info( getClass().getName() + " read " + _totalRowCount + " documents in "
                    + days + " days, " + hours + " hours, " + minutes + " minutes and " + seconds + " seconds" );
       try {
-         if ( !_resultSet.isClosed() ) {
+         if ( _resultSet != null && !_resultSet.isClosed() ) {
             // Some jdbc drivers may not close the ResultSet when the PreparedStatement is closed
             _resultSet.close();
          }
-         if ( !_preparedStatement.isClosed() ) {
+         if ( _preparedStatement != null && !_preparedStatement.isClosed() ) {
             _preparedStatement.close();
          }
       } catch ( SQLException sqlE ) {

@@ -3,6 +3,7 @@ package org.apache.ctakes.core.cc.jdbc.row;
 import org.apache.ctakes.core.cc.jdbc.field.JdbcField;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
@@ -32,6 +33,7 @@ public interface JdbcRow<C, P, D, E, T> {
       }
       final Map<String, JdbcField<?>> fieldMap
             = fields.stream().collect( Collectors.toMap( JdbcField::getFieldName, Function.identity() ) );
+      final Collection<String> assigned = new ArrayList<>( fieldMap.size() );
       final DatabaseMetaData metadata = connection.getMetaData();
       final ResultSet resultSet = metadata.getColumns( null, null, tableName, null );
       int index = 0;
@@ -41,7 +43,12 @@ public interface JdbcRow<C, P, D, E, T> {
          final JdbcField<?> field = fieldMap.get( name );
          if ( field != null ) {
             field.setFieldIndex( index );
+            assigned.add( name );
          }
+      }
+      fieldMap.keySet().removeAll( assigned );
+      if ( !fieldMap.isEmpty() ) {
+         throw new SQLException( "No field indices for " + String.join( " , ", fieldMap.keySet() ) );
       }
    }
 

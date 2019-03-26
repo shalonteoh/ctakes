@@ -5,7 +5,6 @@ import org.apache.ctakes.core.cc.jdbc.row.JdbcRow;
 import org.apache.ctakes.core.cc.jdbc.table.AbstractUmlsTable;
 import org.apache.ctakes.typesystem.type.refsem.UmlsConcept;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
-import org.apache.log4j.Logger;
 import org.apache.uima.jcas.JCas;
 
 import java.sql.Connection;
@@ -26,7 +25,6 @@ import static org.apache.ctakes.core.cc.jdbc.i2b2.ObservationFactTable.CorpusSet
  */
 final public class ObservationFactTable extends AbstractUmlsTable<CorpusSettings> {
 
-   static private final Logger LOGGER = Logger.getLogger( "I2B2JdbcTable" );
 
    private final CorpusSettings _corpusSettings;
 

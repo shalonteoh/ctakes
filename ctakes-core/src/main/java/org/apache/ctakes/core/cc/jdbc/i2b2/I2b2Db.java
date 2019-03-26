@@ -1,6 +1,7 @@
 package org.apache.ctakes.core.cc.jdbc.i2b2;
 
 import org.apache.ctakes.core.cc.jdbc.db.AbstractJdbcDb;
+import org.apache.log4j.Logger;
 import org.apache.uima.resource.ResourceInitializationException;
 
 import java.sql.SQLException;
@@ -15,6 +16,7 @@ import static org.apache.ctakes.core.cc.jdbc.i2b2.ObservationFactTable.CorpusSet
  */
 public class I2b2Db extends AbstractJdbcDb {
 
+   static private final Logger LOGGER = Logger.getLogger( "I2b2Db" );
 
    public I2b2Db( final String driver,
                   final String url,
@@ -47,6 +49,7 @@ public class I2b2Db extends AbstractJdbcDb {
       final ObservationFactTable table
             = new ObservationFactTable( getConnection(), tableName, repeatCuis, corpusSettings );
       addTable( table );
+      LOGGER.info( "Added Observation Fact table " + tableName );
       return table;
    }
 

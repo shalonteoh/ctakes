@@ -36,6 +36,9 @@ final public class NoteSpecs {
    static public final String ID_NAME_CLINICAL_NOTE = "ClinicalNote";
 
    static private final DateFormat DATE_FORMAT = new SimpleDateFormat( "yyyyMMddhhmm" );
+   //   For compatibility with sql db : Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]
+   static private final DateFormat TIMESTAMP_FORMAT = new SimpleDateFormat( "yyyy-MM-dd hh:mm:ss" );
+
    static public final String SUBJECT_PATIENT = "patient";
    static public final String DEFAULT_PATIENT_NAME = "Generic";
 
@@ -171,7 +174,7 @@ final public class NoteSpecs {
       final String sourceDateText = sourceData.getSourceOriginalDate();
       if ( sourceDateText != null ) {
          try {
-            return DATE_FORMAT.parse( sourceDateText );
+            return TIMESTAMP_FORMAT.parse( sourceDateText );
          } catch ( ParseException pE ) {
             // do nothing
          }

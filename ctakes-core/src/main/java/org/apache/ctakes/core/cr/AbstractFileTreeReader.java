@@ -138,7 +138,9 @@ abstract public class AbstractFileTreeReader extends JCasCollectionReader_ImplBa
    private int _patientLevel = 1;
 
    static protected final String UNKNOWN = "Unknown";
-   static private final DateFormat DATE_FORMAT = new SimpleDateFormat( "yyyyMMddhhmm" );
+   //   For compatibility with sql db : Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]
+   static private final DateFormat DATE_FORMAT = new SimpleDateFormat( "yyyy-MM-dd hh:mm:ss" );
+
    static private final Pattern CR_LF = Pattern.compile( "\\r\\n" );
 
    private File _rootDir;

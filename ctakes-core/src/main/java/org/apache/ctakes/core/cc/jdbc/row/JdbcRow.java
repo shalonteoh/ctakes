@@ -1,8 +1,13 @@
 package org.apache.ctakes.core.cc.jdbc.row;
 
-import java.sql.CallableStatement;
-import java.sql.SQLException;
+import org.apache.ctakes.core.cc.jdbc.field.JdbcField;
+
+import java.sql.*;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author SPF , chip-nlp
@@ -11,7 +16,34 @@ import java.util.Collection;
  */
 public interface JdbcRow<C, P, D, E, T> {
 
-   Collection<String> getFieldNames();
+   Collection<JdbcField<?>> getFields();
+
+   default Collection<String> getFieldNames() {
+      return getFields().stream()
+                        .sorted( Comparator.comparingInt( JdbcField::getFieldIndex ) )
+                        .map( JdbcField::getFieldName )
+                        .collect( Collectors.toList() );
+   }
+
+   default void initializeFieldIndices( final Connection connection, final String tableName ) throws SQLException {
+      final Collection<JdbcField<?>> fields = getFields();
+      if ( fields == null ) {
+         throw new SQLException( "No Fields defined for table " + tableName );
+      }
+      final Map<String, JdbcField<?>> fieldMap
+            = fields.stream().collect( Collectors.toMap( JdbcField::getFieldName, Function.identity() ) );
+      final DatabaseMetaData metadata = connection.getMetaData();
+      final ResultSet resultSet = metadata.getColumns( null, null, tableName, null );
+      int index = 0;
+      while ( resultSet.next() ) {
+         index++;
+         final String name = resultSet.getString( "COLUMN_NAME" );
+         final JdbcField<?> field = fieldMap.get( name );
+         if ( field != null ) {
+            field.setFieldIndex( index );
+         }
+      }
+   }
 
    default void initializeCorpus( final C corpusValue ) {
    }

@@ -19,4 +19,8 @@ final public class FloatField extends AbstractJdbcField<Float> {
       statement.setFloat( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Float value ) throws SQLException {
+      statement.setFloat( getFieldIndex(), value );
+   }
+
 }

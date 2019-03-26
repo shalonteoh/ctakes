@@ -19,4 +19,8 @@ final public class IntField extends AbstractJdbcField<Integer> {
       statement.setInt( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Integer value ) throws SQLException {
+      statement.setInt( getFieldIndex(), value );
+   }
+
 }

@@ -20,4 +20,8 @@ final public class TimeField extends AbstractJdbcField<Timestamp> {
       statement.setTimestamp( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Timestamp value ) throws SQLException {
+      statement.setTimestamp( getFieldIndex(), value );
+   }
+
 }

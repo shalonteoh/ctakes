@@ -19,4 +19,8 @@ final public class LongField extends AbstractJdbcField<Long> {
       statement.setLong( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Long value ) throws SQLException {
+      statement.setLong( getFieldIndex(), value );
+   }
+
 }

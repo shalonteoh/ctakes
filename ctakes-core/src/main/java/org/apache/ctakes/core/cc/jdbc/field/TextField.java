@@ -19,4 +19,8 @@ final public class TextField extends AbstractJdbcField<String> {
       statement.setString( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final String value ) throws SQLException {
+      statement.setString( getFieldIndex(), value );
+   }
+
 }

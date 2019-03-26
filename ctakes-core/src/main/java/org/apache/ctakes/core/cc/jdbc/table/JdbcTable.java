@@ -4,6 +4,7 @@ package org.apache.ctakes.core.cc.jdbc.table;
 import org.apache.ctakes.core.cc.jdbc.row.JdbcRow;
 
 import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -25,6 +26,10 @@ public interface JdbcTable<T> {
 
    default Collection<String> getFieldNames() {
       return getJdbcRow().getFieldNames();
+   }
+
+   default void initializeFieldIndices( final Connection connection, final String tableName ) throws SQLException {
+      getJdbcRow().initializeFieldIndices( connection, tableName );
    }
 
    void writeValue( final T value ) throws SQLException;

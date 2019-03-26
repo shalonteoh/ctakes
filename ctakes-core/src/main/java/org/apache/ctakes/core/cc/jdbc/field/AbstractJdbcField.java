@@ -9,7 +9,7 @@ package org.apache.ctakes.core.cc.jdbc.field;
 abstract public class AbstractJdbcField<FT> implements JdbcField<FT> {
 
    private final String _name;
-   private final int _index;
+   private int _index;
 
    public AbstractJdbcField( final String name, final int index ) {
       _name = name;
@@ -30,6 +30,14 @@ abstract public class AbstractJdbcField<FT> implements JdbcField<FT> {
    @Override
    public int getFieldIndex() {
       return _index;
+   }
+
+   /**
+    * {@inheritDoc}
+    */
+   @Override
+   public void setFieldIndex( final int index ) {
+      _index = index;
    }
 
 }

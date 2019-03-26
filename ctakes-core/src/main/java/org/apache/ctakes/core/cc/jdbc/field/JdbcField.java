@@ -18,6 +18,10 @@ public interface JdbcField<T> {
       return NO_INDEX;
    }
 
+   void setFieldIndex( final int index );
+
    void addToStatement( final CallableStatement statement, final T value ) throws SQLException;
+
+   void insertInStatement( final CallableStatement statement, final T value ) throws SQLException;
 
 }

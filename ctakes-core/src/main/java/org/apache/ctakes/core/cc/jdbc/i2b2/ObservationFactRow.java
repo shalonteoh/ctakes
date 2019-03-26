@@ -1,9 +1,6 @@
 package org.apache.ctakes.core.cc.jdbc.i2b2;
 
-import org.apache.ctakes.core.cc.jdbc.field.IntField;
-import org.apache.ctakes.core.cc.jdbc.field.LongField;
-import org.apache.ctakes.core.cc.jdbc.field.TextField;
-import org.apache.ctakes.core.cc.jdbc.field.TimeField;
+import org.apache.ctakes.core.cc.jdbc.field.*;
 import org.apache.ctakes.core.cc.jdbc.row.JdbcRow;
 import org.apache.ctakes.core.util.SourceMetadataUtil;
 import org.apache.ctakes.typesystem.type.constants.CONST;
@@ -90,12 +87,12 @@ final public class ObservationFactRow
    private IdentifiedAnnotation _annotation;
 
 
-   public Collection<String> getFieldNames() {
-      return Arrays.asList( PATIENT_NUM,
+   public Collection<JdbcField<?>> getFields() {
+      return Arrays.asList( _patientNum,
             // Per Document
-            PROVIDER_ID, ENCOUNTER_NUM, START_DATE,
+            _providerId, _encounterNum, _startDate,
             // Per Row
-            INSTANCE_NUM, CONCEPT_CD, MODIFIER_CD, VALTYPE_CD, TVAL_CHAR, OBSERVATION_BLOB );
+            _instanceNum, _conceptCd, _modifierCd, _valtypeCd, _tvalChar, _observationBlob );
    }
 
    public void initializeCorpus( final CorpusSettings corpusValue ) {
@@ -160,20 +157,20 @@ final public class ObservationFactRow
    public void addToStatement( final CallableStatement statement,
                                final UmlsConcept value ) throws SQLException {
       // Per Patient
-      _patientNum.addToStatement( statement, _patient );
+      _patientNum.insertInStatement( statement, _patient );
 
       // Per Document
-      _providerId.addToStatement( statement, _provider );
-      _encounterNum.addToStatement( statement, _encounter );
-      _startDate.addToStatement( statement, _start );
+      _providerId.insertInStatement( statement, _provider );
+      _encounterNum.insertInStatement( statement, _encounter );
+      _startDate.insertInStatement( statement, _start );
 
       // Per Row
-      _instanceNum.addToStatement( statement, _instance );
-      _conceptCd.addToStatement( statement, getConceptCode( value ) );
-      _modifierCd.addToStatement( statement, getModifierCd( value ) );
-      _valtypeCd.addToStatement( statement, getValtypeCd( value ) );
-      _tvalChar.addToStatement( statement, getTvalChar( value ) );
-      _observationBlob.addToStatement( statement, getObservationBlob( value ) );
+      _instanceNum.insertInStatement( statement, _instance );
+      _conceptCd.insertInStatement( statement, getConceptCode( value ) );
+      _modifierCd.insertInStatement( statement, getModifierCd( value ) );
+      _valtypeCd.insertInStatement( statement, getValtypeCd( value ) );
+      _tvalChar.insertInStatement( statement, getTvalChar( value ) );
+      _observationBlob.insertInStatement( statement, getObservationBlob( value ) );
       _instance++;
    }
 

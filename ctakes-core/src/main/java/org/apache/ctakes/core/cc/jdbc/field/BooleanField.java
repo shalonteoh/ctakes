@@ -19,4 +19,8 @@ final public class BooleanField extends AbstractJdbcField<Boolean> {
       statement.setBoolean( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Boolean value ) throws SQLException {
+      statement.setBoolean( getFieldIndex(), value );
+   }
+
 }

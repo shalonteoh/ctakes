@@ -19,4 +19,8 @@ final public class DoubleField extends AbstractJdbcField<Double> {
       statement.setDouble( getFieldName(), value );
    }
 
+   public void insertInStatement( final CallableStatement statement, final Double value ) throws SQLException {
+      statement.setDouble( getFieldIndex(), value );
+   }
+
 }

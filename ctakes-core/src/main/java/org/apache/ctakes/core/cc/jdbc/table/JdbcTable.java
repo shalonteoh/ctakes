@@ -28,6 +28,13 @@ public interface JdbcTable<T> {
       return getJdbcRow().getFieldNames();
    }
 
+   /**
+    * Attempt to get field indices
+    *
+    * @param connection -
+    * @param tableName  -
+    * @throws SQLException if something went wrong or some required fields did not exist
+    */
    default void initializeFieldIndices( final Connection connection, final String tableName ) throws SQLException {
       getJdbcRow().initializeFieldIndices( connection, tableName );
    }

@@ -24,7 +24,7 @@ abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
    public AbstractJdbcTable( final Connection connection, final String tableName ) throws SQLException {
       _tableName = tableName;
       final String sql = createRowInsertSql();
-      _preparedStatement = connection.prepareCall( sql );
+      _preparedStatement = connection.prepareStatement( sql );
    }
 
    /**

@@ -63,11 +63,14 @@ abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
     * @return true if the statement batch was written.
     * @throws SQLException -
     */
-   protected boolean incrementBatchIndex() throws SQLException {
+   protected boolean writeRow() throws SQLException {
+      final PreparedStatement statement = getPreparedStatement();
+      statement.addBatch();
       _batchIndex++;
       if ( _batchIndex >= _batchLimit ) {
          _batchIndex = 0;
-         getPreparedStatement().executeBatch();
+         statement.executeBatch();
+         statement.clearBatch();
          return true;
       }
       return false;

@@ -93,12 +93,13 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
          }
          for ( UmlsConcept concept : umlsConcepts ) {
             row.addToStatement( statement, concept );
-            batchWritten = incrementBatchIndex();
+            batchWritten = writeRow();
          }
       }
       if ( !batchWritten ) {
          // The current batch has not been written to db.  Do so now.
-         getPreparedStatement().executeBatch();
+         statement.executeBatch();
+         statement.clearBatch();
       }
    }
 

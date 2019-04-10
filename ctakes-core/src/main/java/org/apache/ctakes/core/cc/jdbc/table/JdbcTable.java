@@ -1,13 +1,16 @@
 package org.apache.ctakes.core.cc.jdbc.table;
 
 
+import org.apache.ctakes.core.cc.jdbc.field.JdbcField;
 import org.apache.ctakes.core.cc.jdbc.row.JdbcRow;
 
-import java.sql.CallableStatement;
-import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * @author SPF , chip-nlp
@@ -22,21 +25,10 @@ public interface JdbcTable<T> {
 
    JdbcRow<?, ?, ?, ?, ?> getJdbcRow();
 
-   CallableStatement getCallableStatement();
+   PreparedStatement getPreparedStatement();
 
-   default Collection<String> getFieldNames() {
-      return getJdbcRow().getFieldNames();
-   }
-
-   /**
-    * Attempt to get field indices
-    *
-    * @param connection -
-    * @param tableName  -
-    * @throws SQLException if something went wrong or some required fields did not exist
-    */
-   default void initializeFieldIndices( final Connection connection, final String tableName ) throws SQLException {
-      getJdbcRow().initializeFieldIndices( connection, tableName );
+   default Collection<JdbcField<?>> getFields() {
+      return getJdbcRow().getFields();
    }
 
    void writeValue( final T value ) throws SQLException;
@@ -46,15 +38,17 @@ public interface JdbcTable<T> {
     * @throws SQLDataException -
     */
    default String createRowInsertSql() throws SQLDataException {
-      if ( getFieldNames().isEmpty() ) {
+      final List<JdbcField<?>> fields = new ArrayList<>( getFields() );
+      if ( fields.isEmpty() ) {
          throw new SQLDataException( "Must set at least one Field to create an sql insert Statement" );
       }
+      fields.sort( Comparator.comparingInt( JdbcField::getIndex ) );
       final StringBuilder statement = new StringBuilder( "insert into" );
       final StringBuilder queries = new StringBuilder();
       statement.append( " " ).append( getTableName() );
       statement.append( " (" );
-      for ( String fieldName : getFieldNames() ) {
-         statement.append( fieldName ).append( "," );
+      for ( JdbcField<?> field : fields ) {
+         statement.append( field.getName() ).append( "," );
          queries.append( "?," );
       }
       // remove the last comma
@@ -65,7 +59,7 @@ public interface JdbcTable<T> {
    }
 
    default void close() throws SQLException {
-      getCallableStatement().close();
+      getPreparedStatement().close();
    }
 
 }

@@ -1,6 +1,6 @@
 package org.apache.ctakes.core.cc.jdbc.field;
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -10,18 +10,10 @@ import java.sql.SQLException;
  */
 public interface JdbcField<T> {
 
-   int NO_INDEX = -1;
+   String getName();
 
-   String getFieldName();
+   int getIndex();
 
-   default int getFieldIndex() {
-      return NO_INDEX;
-   }
-
-   void setFieldIndex( final int index );
-
-   void addToStatement( final CallableStatement statement, final T value ) throws SQLException;
-
-   void insertInStatement( final CallableStatement statement, final T value ) throws SQLException;
+   void addToStatement( final PreparedStatement statement, final T value ) throws SQLException;
 
 }

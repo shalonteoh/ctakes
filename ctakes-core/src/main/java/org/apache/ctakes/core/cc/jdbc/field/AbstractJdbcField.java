@@ -20,7 +20,7 @@ abstract public class AbstractJdbcField<FT> implements JdbcField<FT> {
     * {@inheritDoc}
     */
    @Override
-   public String getFieldName() {
+   public String getName() {
       return _name;
    }
 
@@ -28,16 +28,8 @@ abstract public class AbstractJdbcField<FT> implements JdbcField<FT> {
     * {@inheritDoc}
     */
    @Override
-   public int getFieldIndex() {
+   public int getIndex() {
       return _index;
-   }
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public void setFieldIndex( final int index ) {
-      _index = index;
    }
 
 }

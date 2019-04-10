@@ -1,7 +1,7 @@
 package org.apache.ctakes.core.cc.jdbc.field;
 
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -11,16 +11,12 @@ import java.sql.SQLException;
  */
 final public class LongField extends AbstractJdbcField<Long> {
 
-   public LongField( final String name ) {
-      super( name, NO_INDEX );
+   public LongField( final String name, final int index ) {
+      super( name, index );
    }
 
-   public void addToStatement( final CallableStatement statement, final Long value ) throws SQLException {
-      statement.setLong( getFieldName(), value );
-   }
-
-   public void insertInStatement( final CallableStatement statement, final Long value ) throws SQLException {
-      statement.setLong( getFieldIndex(), value );
+   public void addToStatement( final PreparedStatement statement, final Long value ) throws SQLException {
+      statement.setLong( getIndex(), value );
    }
 
 }

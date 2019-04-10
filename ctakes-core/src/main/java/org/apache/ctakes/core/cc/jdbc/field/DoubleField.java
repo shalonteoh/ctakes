@@ -1,7 +1,7 @@
 package org.apache.ctakes.core.cc.jdbc.field;
 
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -11,16 +11,12 @@ import java.sql.SQLException;
  */
 final public class DoubleField extends AbstractJdbcField<Double> {
 
-   public DoubleField( final String name ) {
-      super( name, NO_INDEX );
+   public DoubleField( final String name, final int index ) {
+      super( name, index );
    }
 
-   public void addToStatement( final CallableStatement statement, final Double value ) throws SQLException {
-      statement.setDouble( getFieldName(), value );
-   }
-
-   public void insertInStatement( final CallableStatement statement, final Double value ) throws SQLException {
-      statement.setDouble( getFieldIndex(), value );
+   public void addToStatement( final PreparedStatement statement, final Double value ) throws SQLException {
+      statement.setDouble( getIndex(), value );
    }
 
 }

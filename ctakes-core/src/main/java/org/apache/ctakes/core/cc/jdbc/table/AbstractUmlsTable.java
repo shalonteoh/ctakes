@@ -8,8 +8,8 @@ import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 
-import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -68,7 +68,7 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
     */
    @Override
    final public void writeValue( final JCas value ) throws SQLException {
-      final CallableStatement statement = getCallableStatement();
+      final PreparedStatement statement = getPreparedStatement();
       final C corpusInitializer = getCorpusInitializer( value );
       final JdbcRow<C, JCas, JCas, IdentifiedAnnotation, UmlsConcept> row = getJdbcRow();
 
@@ -98,7 +98,7 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
       }
       if ( !batchWritten ) {
          // The current batch has not been written to db.  Do so now.
-         getCallableStatement().executeBatch();
+         getPreparedStatement().executeBatch();
       }
    }
 

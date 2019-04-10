@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceProcessException;
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -54,20 +54,20 @@ final public class ObservationFactRow
 
 
    // Per Patient
-   private final LongField _patientNum = new LongField( PATIENT_NUM );
+   private final LongField _patientNum = new LongField( PATIENT_NUM, 1 );
 
    // Per Document
-   private final TextField _providerId = new TextField( PROVIDER_ID );
-   private final IntField _encounterNum = new IntField( ENCOUNTER_NUM );
-   private final TimeField _startDate = new TimeField( START_DATE );
+   private final TextField _providerId = new TextField( PROVIDER_ID, 2 );
+   private final IntField _encounterNum = new IntField( ENCOUNTER_NUM, 3 );
+   private final TimeField _startDate = new TimeField( START_DATE, 4 );
 
    // Per Row
-   private final LongField _instanceNum = new LongField( INSTANCE_NUM );
-   private final TextField _conceptCd = new TextField( CONCEPT_CD );
-   private final TextField _modifierCd = new TextField( MODIFIER_CD );
-   private final TextField _valtypeCd = new TextField( VALTYPE_CD );
-   private final TextField _tvalChar = new TextField( TVAL_CHAR );
-   private final TextField _observationBlob = new TextField( OBSERVATION_BLOB );
+   private final LongField _instanceNum = new LongField( INSTANCE_NUM, 5 );
+   private final TextField _conceptCd = new TextField( CONCEPT_CD, 6 );
+   private final TextField _modifierCd = new TextField( MODIFIER_CD, 7 );
+   private final TextField _valtypeCd = new TextField( VALTYPE_CD, 8 );
+   private final TextField _tvalChar = new TextField( TVAL_CHAR, 9 );
+   private final TextField _observationBlob = new TextField( OBSERVATION_BLOB, 10 );
 
    // Per Patient
    private long _patient;
@@ -154,23 +154,23 @@ final public class ObservationFactRow
     * Set the concept_cd, modifier_cd, instance_num, valtype_cd, tval_char, observation_blob.
     */
    @Override
-   public void addToStatement( final CallableStatement statement,
+   public void addToStatement( final PreparedStatement statement,
                                final UmlsConcept value ) throws SQLException {
       // Per Patient
-      _patientNum.insertInStatement( statement, _patient );
+      _patientNum.addToStatement( statement, _patient );
 
       // Per Document
-      _providerId.insertInStatement( statement, _provider );
-      _encounterNum.insertInStatement( statement, _encounter );
-      _startDate.insertInStatement( statement, _start );
+      _providerId.addToStatement( statement, _provider );
+      _encounterNum.addToStatement( statement, _encounter );
+      _startDate.addToStatement( statement, _start );
 
       // Per Row
-      _instanceNum.insertInStatement( statement, _instance );
-      _conceptCd.insertInStatement( statement, getConceptCode( value ) );
-      _modifierCd.insertInStatement( statement, getModifierCd( value ) );
-      _valtypeCd.insertInStatement( statement, getValtypeCd( value ) );
-      _tvalChar.insertInStatement( statement, getTvalChar( value ) );
-      _observationBlob.insertInStatement( statement, getObservationBlob( value ) );
+      _instanceNum.addToStatement( statement, _instance );
+      _conceptCd.addToStatement( statement, getConceptCode( value ) );
+      _modifierCd.addToStatement( statement, getModifierCd( value ) );
+      _valtypeCd.addToStatement( statement, getValtypeCd( value ) );
+      _tvalChar.addToStatement( statement, getTvalChar( value ) );
+      _observationBlob.addToStatement( statement, getObservationBlob( value ) );
       _instance++;
    }
 

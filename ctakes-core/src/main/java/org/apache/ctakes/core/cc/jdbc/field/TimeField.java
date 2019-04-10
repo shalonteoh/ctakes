@@ -1,7 +1,7 @@
 package org.apache.ctakes.core.cc.jdbc.field;
 
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
@@ -12,16 +12,12 @@ import java.sql.Timestamp;
  */
 final public class TimeField extends AbstractJdbcField<Timestamp> {
 
-   public TimeField( final String name ) {
-      super( name, NO_INDEX );
+   public TimeField( final String name, final int index ) {
+      super( name, index );
    }
 
-   public void addToStatement( final CallableStatement statement, final Timestamp value ) throws SQLException {
-      statement.setTimestamp( getFieldName(), value );
-   }
-
-   public void insertInStatement( final CallableStatement statement, final Timestamp value ) throws SQLException {
-      statement.setTimestamp( getFieldIndex(), value );
+   public void addToStatement( final PreparedStatement statement, final Timestamp value ) throws SQLException {
+      statement.setTimestamp( getIndex(), value );
    }
 
 }

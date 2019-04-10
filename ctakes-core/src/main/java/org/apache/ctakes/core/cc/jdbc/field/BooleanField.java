@@ -1,7 +1,7 @@
 package org.apache.ctakes.core.cc.jdbc.field;
 
 
-import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -11,16 +11,12 @@ import java.sql.SQLException;
  */
 final public class BooleanField extends AbstractJdbcField<Boolean> {
 
-   public BooleanField( final String name ) {
-      super( name, NO_INDEX );
+   public BooleanField( final String name, final int index ) {
+      super( name, index );
    }
 
-   public void addToStatement( final CallableStatement statement, final Boolean value ) throws SQLException {
-      statement.setBoolean( getFieldName(), value );
-   }
-
-   public void insertInStatement( final CallableStatement statement, final Boolean value ) throws SQLException {
-      statement.setBoolean( getFieldIndex(), value );
+   public void addToStatement( final PreparedStatement statement, final Boolean value ) throws SQLException {
+      statement.setBoolean( getIndex(), value );
    }
 
 }

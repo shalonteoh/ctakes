@@ -23,7 +23,7 @@ public enum CuiCodeUtil {
 
    final private List<PrefixerPair> _prefixerPairList = new ArrayList<>();
 
-   private CuiCodeUtil() {
+   CuiCodeUtil() {
       // Add the standard C as the default encoding prefix
       _prefixerPairList.add( new PrefixerPair( "C0000000" ) );
    }
@@ -31,7 +31,7 @@ public enum CuiCodeUtil {
    public String getAsCui( final Long code ) {
       final long multiplier = code / PREFIX_MULTIPLIER;
       if ( code < 0 || multiplier < 0 || multiplier >= _prefixerPairList.size() ) {
-         LOGGER.error( "Could not create Cui String for " + code );
+         LOGGER.warn( "Could not create Cui String for " + code );
          return "" + code;
       }
       return _prefixerPairList.get( (int)multiplier ).getAsCui( code % PREFIX_MULTIPLIER );

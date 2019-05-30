@@ -110,8 +110,14 @@ final public class LoggerPanel extends JScrollPane {
        */
       @Override
       protected void append( final LoggingEvent event ) {
+         if ( event == null ) {
+            return;
+         }
          if ( _levels.contains( event.getLevel() ) ) {
-            appendText( event.getMessage().toString() + "\n" );
+            final Object message = event.getMessage();
+            if ( message != null ) {
+               appendText( message.toString() + "\n" );
+            }
          }
       }
 

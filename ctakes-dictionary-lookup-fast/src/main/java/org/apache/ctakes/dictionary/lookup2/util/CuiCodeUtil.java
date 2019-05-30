@@ -72,7 +72,7 @@ public enum CuiCodeUtil {
          try {
             return PREFIX_MULTIPLIER * multiplier + Long.parseLong( cuiNum );
          } catch ( NumberFormatException nfE ) {
-            LOGGER.error( "Could not create Cui Code for " + cui );
+            LOGGER.warn( "Could not create Cui Code for " + cui );
          }
          return -1l;
       }
@@ -80,8 +80,8 @@ public enum CuiCodeUtil {
       private String getAsCui( final Long code ) {
          final char[] codeChars = String.valueOf( code ).toCharArray();
          if ( codeChars.length > __digitCount ) {
-            LOGGER.error( "Invalid code " + code + " for prefix " + __prefix
-                          + " has more than " + __digitCount + " digits" );
+            LOGGER.warn( "Invalid code " + code + " for prefix " + __prefix
+                         + " has more than " + __digitCount + " digits" );
             return String.valueOf( __prefix ) + String.valueOf( codeChars );
          }
          final int cuiLength = __prefix.length + __digitCount;

@@ -49,7 +49,8 @@ final public class ParagraphAnnotator extends JCasAnnotator_ImplBase {
    )
    private String _paragraphTypesPath;
 
-   static private final String DEFAULT_PARAGRAPH = "Default Paragraph||(?:(?:\\r?\\n){2,})";
+   // Allows spaces or tabs within the double-eol paragraph separator.
+   static private final String DEFAULT_PARAGRAPH = "Default Paragraph||(?:(?:[\\t ]*\\r?\\n){2,})";
 
    /**
     * Holder for section type as defined in the user's specification bsv file

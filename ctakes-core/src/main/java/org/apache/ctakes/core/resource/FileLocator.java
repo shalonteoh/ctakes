@@ -62,9 +62,13 @@ final public class FileLocator {
     * @return a collection containing the location and the location with the prefix resources/
     */
    static private Collection<String> getUrlSearchPaths( final String location ) {
+      String loci = location;
+      if ( loci.startsWith( "\"" ) && loci.endsWith( "\"" ) ) {
+         loci = loci.substring( 1, loci.length() - 1 );
+      }
       final Collection<String> paths = new ArrayList<>( 2 );
-      paths.add( location );
-      paths.add( "resources/" + location );
+      paths.add( loci );
+      paths.add( "resources/" + loci );
       return paths;
    }
 
@@ -74,24 +78,28 @@ final public class FileLocator {
     * The working directory is traversed backwards to help developers that create projects at upper levels from ctakes.
     */
    static private Collection<String> getFileSearchPaths( final String location ) {
+      String loci = location;
+      if ( loci.startsWith( "\"" ) && loci.endsWith( "\"" ) ) {
+         loci = loci.substring( 1, loci.length() - 1 );
+      }
       final Collection<String> paths = new ArrayList<>();
       final String dir = System.getProperty( "user.dir" );
       if ( dir != null && !dir.isEmpty() ) {
-         paths.add( dir + "/" + location );
-         paths.add( dir + "/resources/" + location );
+         paths.add( dir + "/" + loci );
+         paths.add( dir + "/resources/" + loci );
       }
       final String cTakesHome = System.getenv( CTAKES_HOME );
       if ( cTakesHome != null && !cTakesHome.isEmpty() ) {
-         paths.add( cTakesHome + "/" + location );
-         paths.add( cTakesHome + "/resources/" + location );
+         paths.add( cTakesHome + "/" + loci );
+         paths.add( cTakesHome + "/resources/" + loci );
       }
       if ( dir != null && !dir.isEmpty() ) {
          File ancestor = new File( dir );
          while ( ancestor.getParentFile() != null ) {
             ancestor = ancestor.getParentFile();
-            paths.add( ancestor + "/" + location );
-            paths.add( ancestor + "/ctakes/" + location );
-            paths.add( ancestor + "/resources/" + location );
+            paths.add( ancestor + "/" + loci );
+            paths.add( ancestor + "/ctakes/" + loci );
+            paths.add( ancestor + "/resources/" + loci );
          }
       }
       return paths;
@@ -457,7 +465,11 @@ final public class FileLocator {
     * @return a discovered file or null
     */
    static private File getFileOnly( final String location ) {
-      File file = new File( location );
+      String loci = location;
+      if ( loci.startsWith( "\"" ) && loci.endsWith( "\"" ) ) {
+         loci = loci.substring( 1, loci.length() - 1 );
+      }
+      File file = new File( loci );
       if ( file.exists() ) {
          return file;
       }
@@ -471,7 +483,11 @@ final public class FileLocator {
     * @return a temporary file containing the contents of the stream
     */
    static private File createTempFile( final InputStream stream, final String location ) {
-      final String tempName = location.replace( '/', '_' ).replace( '\\', '_' );
+      String loci = location;
+      if ( loci.startsWith( "\"" ) && loci.endsWith( "\"" ) ) {
+         loci = loci.substring( 1, loci.length() - 1 );
+      }
+      final String tempName = loci.replace( '/', '_' ).replace( '\\', '_' );
       synchronized (TempFileHolder.INSTANCE) {
          final File file = TempFileHolder.INSTANCE.getFile( tempName );
          if ( file != null ) {

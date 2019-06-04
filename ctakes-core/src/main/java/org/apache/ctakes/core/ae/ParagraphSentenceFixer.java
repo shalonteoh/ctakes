@@ -10,10 +10,7 @@ import org.apache.uima.fit.component.JCasAnnotator_ImplBase;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -60,12 +57,7 @@ final public class ParagraphSentenceFixer extends JCasAnnotator_ImplBase {
             if ( (sentence.getBegin() < paragraph.getBegin() && sentence.getEnd() > paragraph.getBegin())
                  || (sentence.getEnd() > paragraph.getEnd() && sentence.getBegin() < paragraph.getEnd()) ) {
                // sentence overlaps but isn't contained
-               Collection<Paragraph> sentenceParagraphs = boundarySentences.get( sentence );
-               if ( sentenceParagraphs == null ) {
-                  sentenceParagraphs = new HashSet<>();
-                  boundarySentences.put( sentence, sentenceParagraphs );
-               }
-               sentenceParagraphs.add( paragraph );
+               boundarySentences.computeIfAbsent( sentence, p -> new HashSet<>() ).add( paragraph );
             }
          }
       }
@@ -73,9 +65,10 @@ final public class ParagraphSentenceFixer extends JCasAnnotator_ImplBase {
       for ( Map.Entry<Sentence, Collection<Paragraph>> boundarySentence : boundarySentences.entrySet() ) {
          final int sentenceBegin = boundarySentence.getKey().getBegin();
          final int sentenceEnd = boundarySentence.getKey().getEnd();
-         final java.util.List<Paragraph> sorted = boundarySentence.getValue().stream()
-               .sorted( ( l1, l2 ) -> l1.getBegin() - l2.getBegin() )
-               .collect( Collectors.toList() );
+         final List<Paragraph> sorted
+               = boundarySentence.getValue().stream()
+                                 .sorted( Comparator.comparingInt( Paragraph::getBegin ) )
+                                 .collect( Collectors.toList() );
          final Paragraph first = sorted.get( 0 );
          if ( sentenceBegin < first.getBegin() && sentenceEnd > first.getBegin() ) {
             // sentence starts before but ends in or after paragraph
@@ -84,17 +77,27 @@ final public class ParagraphSentenceFixer extends JCasAnnotator_ImplBase {
             newBounds.add( new Pair<>( first.getBegin(), end ) );
          }
          for ( int i = 0; i < sorted.size() - 1; i++ ) {
-            if ( sorted.get( i + 1 ).getBegin() > sorted.get( i ).getEnd() ) {
+            if ( sentenceBegin > sorted.get( i ).getBegin() && sentenceEnd >= sorted.get( i ).getEnd() ) {
+               // sentence starts in, ends after
+               newBounds.add( new Pair<>( sentenceBegin, sorted.get( i ).getEnd() ) );
+            }
+            if ( sentenceBegin < sorted.get( i + 1 ).getBegin() && sentenceEnd <= sorted.get( i + 1 ).getEnd() ) {
+               // sentence starts in, ends after
+               newBounds.add( new Pair<>( sorted.get( i + 1 ).getBegin(), sentenceEnd ) );
+            }
+            if ( sorted.get( i + 1 ).getBegin() >= sorted.get( i ).getEnd() ) {
                // sentence extends between two paragraphs
                newBounds.add( new Pair<>( sorted.get( i ).getEnd(), sorted.get( i + 1 ).getBegin() ) );
             }
          }
          final Paragraph last = sorted.get( sorted.size() - 1 );
-         if ( sentenceEnd > last.getEnd() && sentenceBegin < last.getEnd() ) {
+         if ( sentenceEnd >= last.getEnd() && sentenceBegin < last.getEnd() ) {
             // sentence ends after but begins in or before the paragraph
             final int begin = Math.max( last.getBegin(), sentenceBegin );
             newBounds.add( new Pair<>( begin, last.getEnd() ) );
-            newBounds.add( new Pair<>( last.getEnd(), sentenceEnd ) );
+            if ( last.getEnd() < sentenceEnd ) {
+               newBounds.add( new Pair<>( last.getEnd(), sentenceEnd ) );
+            }
          }
       }
       // adjust the cas

@@ -1,0 +1,14 @@
+// Read XMI File using -i from the command line to specify input file
+reader XmiTreeReader
+
+// Write html
+add html.HtmlTextWriter
+
+// write -marked- plaintext
+add pretty.plaintext.PrettyTextWriterFit
+
+// write property list
+add property.plaintext.PropertyTextWriterFit
+
+// Announce completion
+addLast util.FinishedLogger

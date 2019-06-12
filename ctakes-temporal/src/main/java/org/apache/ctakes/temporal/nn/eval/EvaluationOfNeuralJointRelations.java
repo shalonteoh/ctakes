@@ -34,12 +34,15 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ctakes.relationextractor.eval.RelationExtractorEvaluation.HashableArguments;
-import org.apache.ctakes.temporal.ae.DocTimeRelAnnotator;
-import org.apache.ctakes.temporal.ae.EventEventRelationAnnotator;
+import org.apache.ctakes.temporal.eval.EvaluationOfEventEventThymeRelations.AddEEPotentialRelations;
 import org.apache.ctakes.temporal.eval.EvaluationOfEventTimeRelations.ParameterSettings;
+import org.apache.ctakes.temporal.eval.EvaluationOfEventTimeRelations.AddPotentialRelations;
 import org.apache.ctakes.temporal.keras.KerasStringOutcomeDataWriter;
 import org.apache.ctakes.temporal.keras.ScriptStringFeatureDataWriter;
-import org.apache.ctakes.temporal.nn.ae.JointRelationTokenBasedAnnotator;
+//import org.apache.ctakes.temporal.nn.ae.JointRelationTokenBasedAnnotator;
+//import org.apache.ctakes.temporal.nn.ae.TwoSentenceTokenBasedAnnotator;
+import org.apache.ctakes.temporal.nn.ae.WindowBasedAnnotator;
+import org.apache.ctakes.temporal.nn.ae.WindowBasedCasedAnnotator;
 import org.apache.ctakes.temporal.eval.EvaluationOfTemporalRelations_ImplBase;
 import org.apache.ctakes.temporal.eval.Evaluation_ImplBase;
 import org.apache.ctakes.temporal.eval.I2B2Data;
@@ -77,7 +80,6 @@ import org.cleartk.ml.jar.DefaultDataWriterFactory;
 import org.cleartk.ml.jar.DirectoryDataWriterFactory;
 import org.cleartk.ml.jar.GenericJarClassifierFactory;
 import org.cleartk.ml.jar.JarClassifierBuilder;
-import org.cleartk.ml.liblinear.LibLinearStringOutcomeDataWriter;
 //import org.cleartk.ml.libsvm.tk.TkLibSvmStringOutcomeDataWriter;
 //import org.cleartk.ml.libsvm.LIBSVMStringOutcomeDataWriter;
 //import org.cleartk.ml.tksvmlight.TKSVMlightStringOutcomeDataWriter;
@@ -170,7 +172,7 @@ EvaluationOfTemporalRelations_ImplBase{
 
 		//    for(ParameterSettings params : possibleParams){
 		try{
-			File workingDir = new File("/Volumes/chip-nlp/Public/THYME/eval/thyme/");//"target/eval/thyme/");
+			File workingDir = new File("/Users/chenlin/Projects/THYME/modelFile");///Volumes/chip-nlp/Public/THYME/eval/thyme/");//"/Users/chenlin/Projects/deepLearning/models/selfTrainModel");//"target/eval/thyme/");//"/Volumes/chip-nlp/Public/THYME/eval/thyme/");
 			if(!workingDir.exists()) workingDir.mkdirs();
 			if(options.getUseTmp()){
 				File tempModelDir = File.createTempFile("temporal", null, workingDir);
@@ -194,10 +196,10 @@ EvaluationOfTemporalRelations_ImplBase{
 					options.getKernelParams(),
 					params);
 			//			evaluation.prepareXMIsFor(patientSets);
-			if(options.getI2B2Output()!=null) evaluation.setI2B2Output(options.getI2B2Output() + "/temporal-relations/joint");
+			if(options.getI2B2Output()!=null) evaluation.setI2B2Output(options.getI2B2Output() + "/train_and_test/joint");//"/temporal-relations/joint");
 			if(options.getAnaforaOutput()!=null) evaluation.anaforaOutput = options.getAnaforaOutput();
 
-			List<Integer> training = trainItems;
+			List<Integer> training = trainItems; //change train, dev, test here
 			List<Integer> testing = null;
 			if(options.getTest()){
 				training.addAll(devItems);
@@ -295,7 +297,7 @@ EvaluationOfTemporalRelations_ImplBase{
 		if(!this.skipWrite){
 			AggregateBuilder aggregateBuilder = this.getPreprocessorAggregateBuilder();
 			aggregateBuilder.add(CopyFromGold.getDescription(EventMention.class, TimeMention.class, BinaryTextRelation.class));
-			aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(RemoveCrossSentenceRelations.class));
+//			aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(RemoveCrossSentenceRelations.class));
 			if(!this.useGoldAttributes){
 				aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(RemoveGoldAttributes.class));
 			}
@@ -313,8 +315,8 @@ EvaluationOfTemporalRelations_ImplBase{
 			//		aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(RemoveNonUMLSEvents.class));
 
 			//add unlabeled nearby system events as potential links: 
-			//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(AddEEPotentialRelations.class));
-			//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(AddPotentialRelations.class));	
+//						aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(AddEEPotentialRelations.class));
+//						aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(AddPotentialRelations.class));	
 
 			//		aggregateBuilder.add(
 			//				AnalysisEngineFactory.createEngineDescription(EventEventTokenBasedAnnotator.class,//EventEventTokenBasedAnnotator.class,EventEventPathsBasedAnnotator.class, EventEventTokenAndPosBasedAnnotator, EventEventPathsBasedAnnotator
@@ -329,7 +331,7 @@ EvaluationOfTemporalRelations_ImplBase{
 			//						) );
 
 			aggregateBuilder.add(
-					AnalysisEngineFactory.createEngineDescription(JointRelationTokenBasedAnnotator.class,//EventTimeTokenAndPathBasedAnnotator.class,//
+					AnalysisEngineFactory.createEngineDescription(WindowBasedAnnotator.class,//WindowBasedAnnotator.class,//EventTimeTokenAndPathBasedAnnotator.class,//
 							CleartkAnnotator.PARAM_IS_TRAINING,
 							true,
 							DefaultDataWriterFactory.PARAM_DATA_WRITER_CLASS_NAME,
@@ -355,19 +357,19 @@ EvaluationOfTemporalRelations_ImplBase{
 
 		aggregateBuilder.add(CopyFromGold.getDescription(EventMention.class, TimeMention.class));
 
-		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(
-				RemoveCrossSentenceRelations.class,
-				RemoveCrossSentenceRelations.PARAM_SENTENCE_VIEW,
-				CAS.NAME_DEFAULT_SOFA,
-				RemoveCrossSentenceRelations.PARAM_RELATION_VIEW,
-				GOLD_VIEW_NAME));
+		aggregateBuilder.add(CopyFromSystem.getDescription(Sentence.class));
+//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(
+//				RemoveCrossSentenceRelations.class,
+//				RemoveCrossSentenceRelations.PARAM_SENTENCE_VIEW,
+//				CAS.NAME_DEFAULT_SOFA,
+//				RemoveCrossSentenceRelations.PARAM_RELATION_VIEW,
+//				GOLD_VIEW_NAME));
 
-		if (!recallModeEvaluation && this.useClosure) { //closure for gold
-			aggregateBuilder.add(
-					AnalysisEngineFactory.createEngineDescription(AddClosure.class),//AnalysisEngineFactory.createPrimitiveDescription(AddTransitiveContainsRelations.class),
-					CAS.NAME_DEFAULT_SOFA,
-					GOLD_VIEW_NAME);
-		}
+		//closure for gold:
+//			aggregateBuilder.add(
+//					AnalysisEngineFactory.createEngineDescription(AddClosure.class),//AnalysisEngineFactory.createPrimitiveDescription(AddTransitiveContainsRelations.class),
+//					CAS.NAME_DEFAULT_SOFA,
+//					GOLD_VIEW_NAME);
 
 		//keep event event tlinks, remove the other relations
 		//		aggregateBuilder.add(
@@ -384,7 +386,7 @@ EvaluationOfTemporalRelations_ImplBase{
 		//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(RemoveNonUMLSEvents.class));
 
 
-
+		
 		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(RemoveNonContainsRelations.class),
 				CAS.NAME_DEFAULT_SOFA,
 				GOLD_VIEW_NAME);
@@ -398,15 +400,20 @@ EvaluationOfTemporalRelations_ImplBase{
 		//				new File(new File(directory,"event-event"), "model.jar").getPath());
 		//		aed = EventEventRelationAnnotator.createAnnotatorDescription((new File(directory,"event-event/model.jar")).getAbsolutePath());
 		//		aggregateBuilder.add(aed);
-		aed = AnalysisEngineFactory.createEngineDescription(JointRelationTokenBasedAnnotator.class,
+		aed = AnalysisEngineFactory.createEngineDescription(WindowBasedAnnotator.class,//WindowBasedAnnotator.class,
 				CleartkAnnotator.PARAM_IS_TRAINING,
 				false,
 				GenericJarClassifierFactory.PARAM_CLASSIFIER_JAR_PATH,
 				new File(new File(directory,"joint"), "model.jar").getPath());
 		aggregateBuilder.add(aed);
+		
+		//closure for system:
+//		aggregateBuilder.add(
+//				AnalysisEngineFactory.createEngineDescription(AddClosure.class)//AnalysisEngineFactory.createPrimitiveDescription(AddTransitiveContainsRelations.class),
+//				);
 
-//		aed = DocTimeRelAnnotator.createAnnotatorDescription(new File("target/eval/event-properties/train_and_test/docTimeRel/model.jar").getAbsolutePath());		
-//		aggregateBuilder.add(aed);
+		//		aed = DocTimeRelAnnotator.createAnnotatorDescription(new File("target/eval/event-properties/train_and_test/docTimeRel/model.jar").getAbsolutePath());		
+		//		aggregateBuilder.add(aed);
 
 		//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(CrossSentenceTemporalRelationAnnotator.class));
 		//		aggregateBuilder.add(AnalysisEngineFactory.createEngineDescription(WithinSentenceBeforeRelationAnnotator.class));
@@ -423,15 +430,15 @@ EvaluationOfTemporalRelations_ImplBase{
 					GOLD_VIEW_NAME,
 					CAS.NAME_DEFAULT_SOFA
 					);
-			outf =  new File("target/eval/thyme/SystemError_eventEvent_recall_test.txt");
+			outf =  new File("target/brain_biLstm_recall_dev.txt");
 		}else if (!recallModeEvaluation && this.useClosure){
-			outf =  new File("target/eval/thyme/SystemError_eventEvent_precision_test.txt");
+			outf =  new File("target/brain_biLstm_precision_dev.txt");
 		}else{
-			outf =  new File("target/eval/thyme/SystemError_eventEvent_plain_test.txt");
+			outf =  new File("target/colon_bioBert_pmc_dev_closure.txt");
 		}
 
 		PrintWriter outDrop =null;
-//		outDrop = new PrintWriter(new BufferedWriter(new FileWriter(outf, false)));
+		outDrop = new PrintWriter(new BufferedWriter(new FileWriter(outf, false)));
 
 		Function<BinaryTextRelation, ?> getSpan = new Function<BinaryTextRelation, HashableArguments>() {
 			public HashableArguments apply(BinaryTextRelation relation) {
@@ -440,6 +447,14 @@ EvaluationOfTemporalRelations_ImplBase{
 		};
 		Function<BinaryTextRelation, String> getOutcome = AnnotationStatistics.annotationToFeatureValue("category");
 
+		int withinSentRelations = 0;
+		int crossSentRelations = 0;
+		int withinSentCorrect = 0;
+		int crossSentCorrect = 0;
+		
+		int withinSentGolds = 0;
+		int crossSentGolds = 0;
+		
 		AnnotationStatistics<String> stats = new AnnotationStatistics<>();
 		JCasIterator jcasIter =new JCasIterator(collectionReader, aggregateBuilder.createAggregate());
 		JCas jCas = null;
@@ -447,6 +462,10 @@ EvaluationOfTemporalRelations_ImplBase{
 			jCas = jcasIter.next();
 			JCas goldView = jCas.getView(GOLD_VIEW_NAME);
 			JCas systemView = jCas.getView(CAS.NAME_DEFAULT_SOFA);
+			Map<Annotation, Collection<Sentence>> sentCoveringMap = JCasUtil.indexCovering(systemView, Annotation.class, Sentence.class);
+			Map<Annotation, Collection<Sentence>> goldSentCoveringMap = JCasUtil.indexCovering(goldView, Annotation.class, Sentence.class);
+
+			
 			Collection<BinaryTextRelation> goldRelations = JCasUtil.select(
 					goldView,
 					BinaryTextRelation.class);
@@ -472,25 +491,89 @@ EvaluationOfTemporalRelations_ImplBase{
 				Set<HashableArguments> all = Sets.union(goldMap.keySet(), systemMap.keySet());
 				List<HashableArguments> sorted = Lists.newArrayList(all);
 				Collections.sort(sorted);
-				outDrop.println("Doc id: " + ViewUriUtil.getURI(jCas).toString());
-				for (HashableArguments key : sorted) {
-					BinaryTextRelation goldRelation = goldMap.get(key);
-					BinaryTextRelation systemRelation = systemMap.get(key);
-					if (goldRelation == null) {
-						outDrop.println("System added: " + formatRelation(systemRelation));
-					} else if (systemRelation == null) {
-						outDrop.println("System dropped: " + formatRelation(goldRelation));
-					} else if (!systemRelation.getCategory().equals(goldRelation.getCategory())) {
-						String label = systemRelation.getCategory();
-						outDrop.printf("System labeled %s for %s\n", label, formatRelation(goldRelation));
-					} else{
-						outDrop.println("Nailed it! " + formatRelation(systemRelation));
+				if(jCas != null){
+					outDrop.println("Doc id: " + ViewUriUtil.getURI(jCas).toString());
+					for (HashableArguments key : sorted) {
+						BinaryTextRelation goldRelation = goldMap.get(key);
+						BinaryTextRelation systemRelation = systemMap.get(key);
+						if (goldRelation == null) {
+							//outDrop.println("System added: " + formatRelation(systemRelation));
+							if(checkArgumentsInTheSameSent(systemRelation, sentCoveringMap)){
+								withinSentRelations+=1;
+								outDrop.println("System added within-sent: " + formatRelation(systemRelation));
+							}else{
+								crossSentRelations+=1;
+								outDrop.println("System added cross-sent: " + formatRelation(systemRelation));
+							}
+						} else if (systemRelation == null) {
+							//outDrop.println("System dropped: " + formatRelation(goldRelation));
+							if(checkArgumentsInTheSameSent(goldRelation, goldSentCoveringMap)){
+								withinSentGolds+=1;
+								outDrop.println("System dropped within-sent: " + formatRelation(goldRelation));
+							}else{
+								crossSentGolds+=1;
+								outDrop.println("System dropped cross-sent: " + formatRelation(goldRelation));
+							}
+						} else if (!systemRelation.getCategory().equals(goldRelation.getCategory())) {
+							String label = systemRelation.getCategory();
+							//outDrop.printf("System labeled %s for %s\n", label, formatRelation(goldRelation));
+							if(checkArgumentsInTheSameSent(systemRelation, sentCoveringMap)){
+								withinSentRelations+=1;
+								outDrop.printf("System labeled within-sent %s for %s\n", label, formatRelation(goldRelation));
+							}else{
+								crossSentRelations+=1;
+								outDrop.printf("System labeled cross-sent %s for %s\n", label, formatRelation(goldRelation));
+							}
+							if(checkArgumentsInTheSameSent(goldRelation, goldSentCoveringMap)){
+								withinSentGolds+=1;
+							}else{
+								crossSentGolds+=1;
+							}
+						} else{
+							//outDrop.println("Nailed it! " + formatRelation(systemRelation));
+							if(checkArgumentsInTheSameSent(systemRelation, sentCoveringMap)){
+								withinSentRelations+=1;
+								withinSentCorrect +=1;
+								outDrop.println("Nailed it within-sent! " + formatRelation(systemRelation));
+							}else{
+								crossSentRelations+=1;
+								crossSentCorrect +=1;
+								outDrop.println("Nailed it cross-sent! " + formatRelation(systemRelation));
+							}
+							
+							if(checkArgumentsInTheSameSent(goldRelation, goldSentCoveringMap)){
+								withinSentGolds+=1;
+							}else{
+								crossSentGolds+=1;
+							}
+						}
 					}
 				}
 			}
 		}
-//		outDrop.close();
+		System.out.print("There are "+ withinSentRelations + " within Sentence Predictions; " + withinSentCorrect+ " are correct predictions\n");
+		System.out.print("There are "+ crossSentRelations + " cross Sentence Predictions; " + crossSentCorrect+ " are correct predictions\n");
+		System.out.print("There are "+ crossSentGolds + " cross Sentence Gold Relations; " + withinSentGolds+ " are within-sent gold relations\n");
+		
+		outDrop.close();
 		return stats;
+	}
+
+	private static boolean checkArgumentsInTheSameSent(BinaryTextRelation systemRelation,
+			Map<Annotation, Collection<Sentence>> sentCoveringMap) {
+		Annotation arg1 = systemRelation.getArg1().getArgument();
+		Annotation arg2 = systemRelation.getArg2().getArgument();
+		Collection<Sentence> sent1List = sentCoveringMap.get(arg1);
+		Collection<Sentence> sent2List = sentCoveringMap.get(arg2);
+		for(Sentence sent1 : sent1List){
+			for(Sentence sent2 : sent2List){
+				if(sent1==sent2){
+					return true;
+				}
+			}
+		}
+		
+		return false;
 	}
 
 	public static class RemoveNonUMLSEvents extends org.apache.uima.fit.component.JCasAnnotator_ImplBase {

@@ -34,15 +34,12 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.ctakes.relationextractor.eval.RelationExtractorEvaluation.HashableArguments;
-import org.apache.ctakes.temporal.eval.EvaluationOfEventEventThymeRelations.AddEEPotentialRelations;
 import org.apache.ctakes.temporal.eval.EvaluationOfEventTimeRelations.ParameterSettings;
-import org.apache.ctakes.temporal.eval.EvaluationOfEventTimeRelations.AddPotentialRelations;
 import org.apache.ctakes.temporal.keras.KerasStringOutcomeDataWriter;
 import org.apache.ctakes.temporal.keras.ScriptStringFeatureDataWriter;
 //import org.apache.ctakes.temporal.nn.ae.JointRelationTokenBasedAnnotator;
 //import org.apache.ctakes.temporal.nn.ae.TwoSentenceTokenBasedAnnotator;
 import org.apache.ctakes.temporal.nn.ae.WindowBasedAnnotator;
-import org.apache.ctakes.temporal.nn.ae.WindowBasedCasedAnnotator;
 import org.apache.ctakes.temporal.eval.EvaluationOfTemporalRelations_ImplBase;
 import org.apache.ctakes.temporal.eval.Evaluation_ImplBase;
 import org.apache.ctakes.temporal.eval.I2B2Data;

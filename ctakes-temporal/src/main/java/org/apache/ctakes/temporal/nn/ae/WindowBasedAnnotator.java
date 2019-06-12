@@ -1,50 +1,31 @@
 package org.apache.ctakes.temporal.nn.ae;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
-import org.apache.ctakes.constituency.parser.treekernel.TreeExtractor;
-import org.apache.ctakes.constituency.parser.util.AnnotationTreeUtils;
-import org.apache.ctakes.core.resource.FileLocator;
-import org.apache.ctakes.core.util.OntologyConceptUtil;
 import org.apache.ctakes.temporal.ae.TemporalRelationExtractorAnnotator.IdentifiedAnnotationPair;
 import org.apache.ctakes.temporal.nn.ae.EventTimeTokenBasedAnnotator.OutputMode;
-import org.apache.ctakes.temporal.nn.data.ArgContextProvider;
 import org.apache.ctakes.temporal.utils.TokenPreprocForWord2Vec;
 import org.apache.ctakes.typesystem.type.relation.BinaryTextRelation;
 import org.apache.ctakes.typesystem.type.relation.RelationArgument;
 import org.apache.ctakes.typesystem.type.relation.TemporalTextRelation;
 import org.apache.ctakes.typesystem.type.syntax.BaseToken;
-import org.apache.ctakes.typesystem.type.syntax.NewlineToken;
-import org.apache.ctakes.typesystem.type.syntax.TreebankNode;
-import org.apache.ctakes.typesystem.type.syntax.WordToken;
 import org.apache.ctakes.typesystem.type.textsem.EventMention;
 import org.apache.ctakes.typesystem.type.textsem.IdentifiedAnnotation;
 import org.apache.ctakes.typesystem.type.textsem.TimeMention;
 import org.apache.ctakes.typesystem.type.textspan.Segment;
-import org.apache.ctakes.typesystem.type.textspan.Sentence;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.fit.util.JCasUtil;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
-import org.cleartk.ml.Classifier;
 import org.cleartk.ml.CleartkAnnotator;
-import org.cleartk.ml.CleartkProcessingException;
-import org.cleartk.ml.DataWriter;
 import org.cleartk.ml.Feature;
 import org.cleartk.ml.Instance;
 import org.cleartk.util.ViewUriUtil;
@@ -168,11 +149,11 @@ public class WindowBasedAnnotator extends CleartkAnnotator<String> {
 
 			String context;
 			if(arg1 instanceof TimeMention){
-				context = getTokenContext(jCas, arg1, "time", arg2, "event");
+				context = getTokenContext(jCas, arg1, "t", arg2, "e");
 			}else if(arg2 instanceof TimeMention){
-				context = getTokenContext(jCas, arg1, "event", arg2, "time");
+				context = getTokenContext(jCas, arg1, "e", arg2, "t");
 			}else{
-				context = getTokenContext(jCas, arg1, "event a", arg2, "event b");
+				context = getTokenContext(jCas, arg1, "ea", arg2, "eb");
 			}
 
 			List<Feature> feats = new ArrayList<>();
@@ -231,14 +212,14 @@ public class WindowBasedAnnotator extends CleartkAnnotator<String> {
 		}
 
 		//arg1
-		tokens.add(type1 + " start");
+		tokens.add(type1 + "s");
 		if (arg1 instanceof TimeMention){
 			String timeTag = generateTimeTag(jCas, (TimeMention)arg1);
 			tokens.add(timeTag);
 		}else{
 			tokens.add(arg1.getCoveredText().replaceAll("[\r\n]"," newline").toLowerCase());//.toLowerCase()
 		}
-		tokens.add(type1 + " end");
+		tokens.add(type1 + "e");
 
 		//tokens in the middle
 		for(BaseToken baseToken :  JCasUtil.selectCovered(jCas, BaseToken.class, arg1.getEnd(), arg2.getBegin()) ) {
@@ -247,14 +228,14 @@ public class WindowBasedAnnotator extends CleartkAnnotator<String> {
 		}
 
 		//arg2
-		tokens.add(type2 + " start");
+		tokens.add(type2 + "s");
 		if (arg2 instanceof TimeMention){
 			String timeTag = generateTimeTag(jCas, (TimeMention)arg2);
 			tokens.add(timeTag);
 		}else{
 			tokens.add(arg2.getCoveredText().replaceAll("[\r\n]"," newline").toLowerCase());//.toLowerCase()
 		}
-		tokens.add(type2 + " end");
+		tokens.add(type2 + "e");
 
 		//two tokens after
 		for(BaseToken baseToken :  JCasUtil.selectFollowing(jCas, BaseToken.class, arg2, 2) ) {

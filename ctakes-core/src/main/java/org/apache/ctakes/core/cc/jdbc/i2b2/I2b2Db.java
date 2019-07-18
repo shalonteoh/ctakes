@@ -31,19 +31,18 @@ public class I2b2Db extends AbstractJdbcDb {
     * @return observation fact table with only negation marked by a negative (-) sign before concept codes.
     * @throws SQLException -
     */
-   protected ObservationFactTable addObservationFact( final String tableName, final boolean repeatCuis )
+   public ObservationFactTable addObservationFact( final String tableName, final boolean repeatCuis )
          throws SQLException {
-      final CorpusSettings settings = new CorpusSettings( CorpusSettings.Marker.MARK_NEGATED );
+      final ObservationFactTable.CorpusSettings settings
+            = new ObservationFactTable.CorpusSettings( ObservationFactTable.CorpusSettings.Marker.MARK_NEGATED );
       return addObservationFact( tableName, repeatCuis, settings );
    }
 
    /**
-    * @param tableName      name of the output observation fact table.
-    * @param corpusSettings settings for marking negation, uncertainty and generics.
-    * @return observation fact table.
-    * @throws SQLException -
+    * {@inheritDoc}
     */
-   protected ObservationFactTable addObservationFact( final String tableName,
+//   @Override
+   public ObservationFactTable addObservationFact( final String tableName,
                                                       final boolean repeatCuis,
                                                       final CorpusSettings corpusSettings ) throws SQLException {
       final ObservationFactTable table

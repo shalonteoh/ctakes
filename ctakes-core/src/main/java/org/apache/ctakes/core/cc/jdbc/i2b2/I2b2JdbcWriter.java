@@ -51,7 +51,15 @@ public class I2b2JdbcWriter extends AbstractJCasJdbcWriter {
       super.process( jcas );
    }
 
-   final protected JdbcDb createJdbcDb( final String driver,
+   final protected String getTableName() {
+      return _tableName;
+   }
+
+   final protected boolean isRepeatCuis() {
+      return _repeatCuis;
+   }
+
+   protected JdbcDb createJdbcDb( final String driver,
                                         final String url,
                                         final String user,
                                         final String pass,
@@ -59,7 +67,7 @@ public class I2b2JdbcWriter extends AbstractJCasJdbcWriter {
       LOGGER.info( "Initializing connection to " + url + " ..." );
       final I2b2Db db = new I2b2Db( driver, url, user, pass, keepAlive );
       try {
-         db.addObservationFact( _tableName, _repeatCuis );
+         db.addObservationFact( getTableName(), isRepeatCuis() );
       } catch ( SQLException sqlE ) {
          throw new ResourceInitializationException( sqlE );
       }

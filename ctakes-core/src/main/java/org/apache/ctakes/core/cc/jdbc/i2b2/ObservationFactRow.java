@@ -28,7 +28,7 @@ import static org.apache.ctakes.core.cc.jdbc.i2b2.ObservationFactTable.CorpusSet
  * @version %I%
  * @since 3/14/2019
  */
-final public class ObservationFactRow
+public class ObservationFactRow
       implements JdbcRow<CorpusSettings, JCas, JCas, IdentifiedAnnotation, UmlsConcept> {
 
    static private final Logger LOGGER = Logger.getLogger( "ObservationFactRow" );
@@ -177,7 +177,7 @@ final public class ObservationFactRow
    /**
     * Set document information as empty.
     */
-   private void setEmptyDocInfo() {
+   protected void setEmptyDocInfo() {
       _encounter = -1;
       _provider = "";
       _start = Timestamp.valueOf( LocalDateTime.now() );
@@ -199,7 +199,7 @@ final public class ObservationFactRow
       return concept.getPreferredText();
    }
 
-   private String getObservationBlob( final UmlsConcept concept ) {
+   protected String getObservationBlob( final UmlsConcept concept ) {
       return "";
    }
 

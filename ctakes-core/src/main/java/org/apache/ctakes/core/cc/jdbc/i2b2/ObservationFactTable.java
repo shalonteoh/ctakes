@@ -23,7 +23,7 @@ import static org.apache.ctakes.core.cc.jdbc.i2b2.ObservationFactTable.CorpusSet
  * @version %I%
  * @since 3/12/2019
  */
-final public class ObservationFactTable extends AbstractUmlsTable<CorpusSettings> {
+public class ObservationFactTable extends AbstractUmlsTable<CorpusSettings> {
 
 
    private final CorpusSettings _corpusSettings;

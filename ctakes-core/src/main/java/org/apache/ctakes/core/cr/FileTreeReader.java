@@ -28,7 +28,7 @@ import java.util.stream.Stream;
  * @since 2/10/2016
  */
 @PipeBitInfo(
-      name = "Files in Dir Tree Reader",
+      name = "File Tree Reader",
       description = "Reads document texts from text files in a directory tree.",
       role = PipeBitInfo.Role.READER,
       products = { PipeBitInfo.TypeProduct.DOCUMENT_ID, PipeBitInfo.TypeProduct.DOCUMENT_ID_PREFIX }

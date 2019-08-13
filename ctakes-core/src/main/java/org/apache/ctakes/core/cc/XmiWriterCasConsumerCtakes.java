@@ -39,6 +39,7 @@ package org.apache.ctakes.core.cc;
 
 import org.apache.ctakes.core.pipeline.PipeBitInfo;
 import org.apache.ctakes.core.util.DocumentIDAnnotationUtil;
+import org.apache.log4j.Logger;
 import org.apache.uima.UIMAFramework;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -73,6 +74,8 @@ import java.net.URL;
  * <ul>
  * <li><code>OutputDirectory</code> - path to directory into which output files will be written</li>
  * </ul>
+ * @deprecated Please use FileTreeXmiWriter.
+ * FileTreeXmiWriter can use a specific output subdirectory, patient name (directories), and write to a full output tree.
  */
 @PipeBitInfo(
       name = "XMI Writer",
@@ -80,6 +83,7 @@ import java.net.URL;
       role = PipeBitInfo.Role.WRITER,
       dependencies = { PipeBitInfo.TypeProduct.DOCUMENT_ID }
 )
+@Deprecated
 public class XmiWriterCasConsumerCtakes extends CasConsumer_ImplBase {
 	/**
 	 * Name of configuration parameter that must be set to the path of a directory into which the
@@ -94,6 +98,7 @@ public class XmiWriterCasConsumerCtakes extends CasConsumer_ImplBase {
 	@Override
 	public void initialize( UimaContext context ) throws ResourceInitializationException {
 		super.initialize( context );
+		Logger.getLogger( getClass().getSimpleName() ).warn( "Deprecated.  Please use FileTreeXmiWriter instead." );
 		mDocNum = 0;
 		if ( !mOutputDir.exists() ) {
 			mOutputDir.mkdirs();

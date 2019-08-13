@@ -70,6 +70,7 @@ import java.util.List;
 		role = PipeBitInfo.Role.READER,
 		products = { PipeBitInfo.TypeProduct.DOCUMENT_ID }
 )
+@Deprecated
 public class FilesInDirectoryCollectionReader extends CollectionReader_ImplBase
 {
 	/**

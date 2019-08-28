@@ -40,6 +40,15 @@ public interface JdbcDb {
    }
 
    /**
+    * @param batchSize batch size limit after which the batch is written to the db table.  Must be called after table creation.
+    */
+   default void setBatchSize( final int batchSize ) {
+      for ( JdbcTable<?> table : getTables() ) {
+         table.setBatchSize( batchSize );
+      }
+   }
+
+   /**
     * Close each table.
     *
     * @throws SQLException -

@@ -75,14 +75,15 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
       row.initializeCorpus( corpusInitializer );
       row.initializePatient( value );
       row.initializeDocument( value );
+
+      final Collection<UmlsConcept> removals = new ArrayList<>();
+      final Collection<String> cuis = new HashSet<>();
       boolean batchWritten = false;
       final Collection<IdentifiedAnnotation> annotations = JCasUtil.select( value, IdentifiedAnnotation.class );
       for ( IdentifiedAnnotation annotation : annotations ) {
          row.initializeEntity( annotation );
          final Collection<UmlsConcept> umlsConcepts = OntologyConceptUtil.getUmlsConcepts( annotation );
          if ( !_repeatCuis && umlsConcepts.size() > 1 ) {
-            final Collection<UmlsConcept> removals = new ArrayList<>();
-            final Collection<String> cuis = new HashSet<>();
             for ( UmlsConcept concept : umlsConcepts ) {
                if ( cuis.contains( concept.getCui() ) ) {
                   removals.add( concept );
@@ -90,6 +91,8 @@ abstract public class AbstractUmlsTable<C> extends AbstractJdbcTable<JCas> {
                cuis.add( concept.getCui() );
             }
             umlsConcepts.removeAll( removals );
+            removals.clear();
+            cuis.clear();
          }
          for ( UmlsConcept concept : umlsConcepts ) {
             row.addToStatement( statement, concept );

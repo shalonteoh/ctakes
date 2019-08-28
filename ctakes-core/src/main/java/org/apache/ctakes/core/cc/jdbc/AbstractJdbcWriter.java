@@ -59,9 +59,17 @@ abstract public class AbstractJdbcWriter<T> extends JCasAnnotator_ImplBase {
    )
    private String _keepAlive;
 
+   static public final String PARAM_BATCH_SIZE = "BatchSize";
+   @ConfigurationParameter(
+         name = PARAM_BATCH_SIZE,
+         description = "Number of statements to use in a batch.  0 or 1 denotes that batches should not be used.",
+         mandatory = false
+   )
+   private String _batchSize;
+
 
    // Maximum row count for prepared statement batches
-   static private final int MAX_BATCH_SIZE = 100;
+   static private final int MAX_BATCH_SIZE = 256;
 
    static private final Object DATA_LOCK = new Object();
 
@@ -75,6 +83,14 @@ abstract public class AbstractJdbcWriter<T> extends JCasAnnotator_ImplBase {
    public void initialize( final UimaContext context ) throws ResourceInitializationException {
       super.initialize( context );
       _jdbcDb = createJdbcDb( _dbDriver, _url, _user, _pass, _keepAlive );
+      if ( _batchSize != null && !_batchSize.trim().isEmpty() ) {
+         try {
+            final int batchSize = Integer.decode( _batchSize.trim() );
+            _jdbcDb.setBatchSize( batchSize );
+         } catch ( NumberFormatException nfE ) {
+            LOGGER.error( "Could not parse batch size " + _batchSize );
+         }
+      }
    }
 
    /**

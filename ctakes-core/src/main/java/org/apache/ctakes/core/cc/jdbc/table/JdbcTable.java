@@ -27,6 +27,16 @@ public interface JdbcTable<T> {
 
    PreparedStatement getPreparedStatement();
 
+   /**
+    * @param batchSize batch size limit after which the batch is written to the db table.
+    */
+   void setBatchSize( final int batchSize );
+
+   /**
+    * @return batch size limit after which the batch is written to the db table.
+    */
+   int getBatchSize();
+
    default Collection<JdbcField<?>> getFields() {
       return getJdbcRow().getFields();
    }

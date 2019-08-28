@@ -14,11 +14,11 @@ import java.sql.SQLException;
 @NotThreadSafe
 abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
 
-   static private final int DEFAULT_BATCH_LIMIT = 100;
+   static private final int DEFAULT_BATCH_LIMIT = 256;
 
    private final String _tableName;
    private final PreparedStatement _preparedStatement;
-   private int _batchLimit = DEFAULT_BATCH_LIMIT;
+   private int _batchSize = DEFAULT_BATCH_LIMIT;
    private int _batchIndex = 0;
 
    public AbstractJdbcTable( final Connection connection, final String tableName ) throws SQLException {
@@ -44,19 +44,21 @@ abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
    }
 
    /**
-    * @param limit batch size limit after which the batch is written to the db table.  Max 10,000.
+    * @param batchSize batch size limit after which the batch is written to the db table.  Max 10,000.  0 or 1 disable batching.
     */
-   final public void setBatchLimit( final int limit ) {
-      if ( limit > 0 && limit <= 10000 ) {
-         _batchLimit = limit;
+   @Override
+   final public void setBatchSize( final int batchSize ) {
+      if ( batchSize >= 0 && batchSize <= 10000 ) {
+         _batchSize = batchSize;
       }
    }
 
    /**
-    * @return batch size limit after which the batch is written to the db table.
+    * {@inheritDoc}
     */
-   final public int getBatchLimit() {
-      return _batchLimit;
+   @Override
+   final public int getBatchSize() {
+      return _batchSize;
    }
 
    /**
@@ -65,9 +67,15 @@ abstract public class AbstractJdbcTable<T> implements JdbcTable<T> {
     */
    protected boolean writeRow() throws SQLException {
       final PreparedStatement statement = getPreparedStatement();
+      if ( _batchSize < 2 ) {
+         // If the batch limit is 0 or 1 then write each row as it is populated.
+         statement.execute();
+         return true;
+      }
+      // Otherwise use a batch.
       statement.addBatch();
       _batchIndex++;
-      if ( _batchIndex >= _batchLimit ) {
+      if ( _batchIndex >= _batchSize ) {
          _batchIndex = 0;
          statement.executeBatch();
          statement.clearBatch();
